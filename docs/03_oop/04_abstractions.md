@@ -2,116 +2,108 @@
 
 ## Abstract Base Classes (ABC)
 
-### Basic ABC Usage
+### Basic Abstract Class
 ```python
 from abc import ABC, abstractmethod
 
 class Shape(ABC):
-    """Abstract base class for shapes"""
-    
     @abstractmethod
-    def area(self):
+    def area(self) -> float:
         """Calculate area of the shape"""
         pass
     
     @abstractmethod
-    def perimeter(self):
+    def perimeter(self) -> float:
         """Calculate perimeter of the shape"""
         pass
     
-    @abstractmethod
-    def draw(self):
-        """Draw the shape"""
-        pass
+    def describe(self) -> str:
+        """Non-abstract method using abstract methods"""
+        return f"Area: {self.area()}, Perimeter: {self.perimeter()}"
 
-# Cannot instantiate abstract class
-# shape = Shape()  # TypeError
-
-class Circle(Shape):
-    def __init__(self, radius):
-        self.radius = radius
+class Rectangle(Shape):
+    def __init__(self, width: float, height: float):
+        self.width = width
+        self.height = height
     
-    def area(self):
-        return 3.14159 * self.radius ** 2
+    def area(self) -> float:
+        return self.width * self.height
     
-    def perimeter(self):
-        return 2 * 3.14159 * self.radius
-    
-    def draw(self):
-        return f"Drawing circle with radius {self.radius}"
+    def perimeter(self) -> float:
+        return 2 * (self.width + self.height)
 ```
 
 ### Abstract Properties
 ```python
-from abc import ABC, abstractmethod
-
 class Vehicle(ABC):
+    def __init__(self, model: str):
+        self._model = model
+    
     @property
     @abstractmethod
-    def wheel_count(self):
-        """Number of wheels"""
+    def vehicle_type(self) -> str:
+        """The type of vehicle"""
         pass
     
     @property
     @abstractmethod
-    def fuel_type(self):
-        """Type of fuel used"""
+    def fuel_capacity(self) -> float:
+        """Fuel capacity in liters"""
         pass
     
-    @abstractmethod
-    def start_engine(self):
-        """Start the vehicle's engine"""
-        pass
+    @property
+    def model(self) -> str:
+        return self._model
 
 class Car(Vehicle):
     @property
-    def wheel_count(self):
-        return 4
+    def vehicle_type(self) -> str:
+        return "Car"
     
     @property
-    def fuel_type(self):
-        return "gasoline"
-    
-    def start_engine(self):
-        return "Car engine starting..."
+    def fuel_capacity(self) -> float:
+        return 45.0  # Standard car fuel tank
 ```
 
 ## Interfaces
 
 ### Informal Interfaces
 ```python
-from abc import ABC, abstractmethod
-
-class Drawable(ABC):
-    @abstractmethod
-    def draw(self):
-        pass
-
-class Movable(ABC):
-    @abstractmethod
-    def move(self, x, y):
-        pass
-
-class Resizable(ABC):
-    @abstractmethod
-    def resize(self, factor):
-        pass
-
-class GameSprite(Drawable, Movable, Resizable):
-    def __init__(self, x, y, size):
-        self.x = x
-        self.y = y
-        self.size = size
+class Serializable:
+    """Interface for objects that can be serialized"""
+    def serialize(self) -> dict:
+        raise NotImplementedError
     
-    def draw(self):
-        return f"Drawing sprite at ({self.x}, {self.y})"
+    def deserialize(self, data: dict) -> None:
+        raise NotImplementedError
+
+class JSONSerializable:
+    """Interface for JSON serialization"""
+    def to_json(self) -> str:
+        raise NotImplementedError
     
-    def move(self, x, y):
-        self.x += x
-        self.y += y
+    def from_json(self, json_str: str) -> None:
+        raise NotImplementedError
+
+class User(Serializable, JSONSerializable):
+    def __init__(self, name: str, age: int):
+        self.name = name
+        self.age = age
     
-    def resize(self, factor):
-        self.size *= factor
+    def serialize(self) -> dict:
+        return {"name": self.name, "age": self.age}
+    
+    def deserialize(self, data: dict) -> None:
+        self.name = data["name"]
+        self.age = data["age"]
+    
+    def to_json(self) -> str:
+        import json
+        return json.dumps(self.serialize())
+    
+    def from_json(self, json_str: str) -> None:
+        import json
+        self.deserialize(json.loads(json_str))
 ```
 
 ### Protocol Classes (Python 3.8+)
@@ -119,277 +111,267 @@ class GameSprite(Drawable, Movable, Resizable):
 from typing import Protocol, runtime_checkable
 
 @runtime_checkable
-class Printable(Protocol):
-    def print(self) -> str:
-        ...
+class Drawable(Protocol):
+    def draw(self) -> str: ...
+    def get_bounds(self) -> tuple[float, float, float, float]: ...
 
 @runtime_checkable
-class Serializable(Protocol):
-    def to_dict(self) -> dict:
-        ...
-    
-    def from_dict(self, data: dict) -> None:
-        ...
+class Resizable(Protocol):
+    def resize(self, factor: float) -> None: ...
 
-class Document:
-    def __init__(self, content: str):
-        self.content = content
+class Circle:
+    def __init__(self, x: float, y: float, radius: float):
+        self.x = x
+        self.y = y
+        self.radius = radius
     
-    def print(self) -> str:
-        return f"Printing: {self.content}"
+    def draw(self) -> str:
+        return f"Drawing Circle at ({self.x}, {self.y})"
     
-    def to_dict(self) -> dict:
-        return {"content": self.content}
-    
-    def from_dict(self, data: dict) -> None:
-        self.content = data["content"]
-
-# Runtime protocol checking
-doc = Document("Hello")
-print(isinstance(doc, Printable))      # True
-print(isinstance(doc, Serializable))   # True
-```
-
-## Abstract Methods and Properties
-
-### Abstract Method Patterns
-```python
-from abc import ABC, abstractmethod
-from typing import List, Optional
-
-class DataProcessor(ABC):
-    @abstractmethod
-    def process(self, data: List[str]) -> List[str]:
-        """Process the input data"""
-        pass
-    
-    @abstractmethod
-    def validate(self, data: List[str]) -> bool:
-        """Validate the input data"""
-        pass
-    
-    def run(self, data: List[str]) -> Optional[List[str]]:
-        """Template method that runs the processing pipeline"""
-        if self.validate(data):
-            return self.process(data)
-        return None
-
-class UpperCaseProcessor(DataProcessor):
-    def process(self, data: List[str]) -> List[str]:
-        return [item.upper() for item in data]
-    
-    def validate(self, data: List[str]) -> bool:
-        return all(isinstance(item, str) for item in data)
-```
-
-### Abstract Property Patterns
-```python
-class Shape(ABC):
-    @property
-    @abstractmethod
-    def vertices(self) -> List[tuple]:
-        """Get the vertices of the shape"""
-        pass
-    
-    @property
-    @abstractmethod
-    def center(self) -> tuple:
-        """Get the center point of the shape"""
-        pass
-    
-    @property
-    def bounding_box(self) -> tuple:
-        """Calculate bounding box from vertices"""
-        if not self.vertices:
-            return (0, 0, 0, 0)
-        x_coords = [v[0] for v in self.vertices]
-        y_coords = [v[1] for v in self.vertices]
-        return (min(x_coords), min(y_coords), 
-                max(x_coords), max(y_coords))
-
-class Rectangle(Shape):
-    def __init__(self, x, y, width, height):
-        self._x = x
-        self._y = y
-        self._width = width
-        self._height = height
-    
-    @property
-    def vertices(self) -> List[tuple]:
-        return [(self._x, self._y),
-                (self._x + self._width, self._y),
-                (self._x + self._width, self._y + self._height),
-                (self._x, self._y + self._height)]
-    
-    @property
-    def center(self) -> tuple:
-        return (self._x + self._width/2, 
-                self._y + self._height/2)
-```
-
-## Advanced Abstraction Patterns
-
-### Composable Abstractions
-```python
-class Renderer(ABC):
-    @abstractmethod
-    def render(self, data: str) -> str:
-        pass
-
-class HTMLRenderer(Renderer):
-    def render(self, data: str) -> str:
-        return f"<p>{data}</p>"
-
-class MarkdownRenderer(Renderer):
-    def render(self, data: str) -> str:
-        return f"**{data}**"
-
-class Document:
-    def __init__(self, renderer: Renderer):
-        self.renderer = renderer
-        self.content = []
-    
-    def add_content(self, content: str):
-        self.content.append(content)
-    
-    def render(self) -> str:
-        return "\n".join(
-            self.renderer.render(item) 
-            for item in self.content
+    def get_bounds(self) -> tuple[float, float, float, float]:
+        return (
+            self.x - self.radius,
+            self.y - self.radius,
+            self.x + self.radius,
+            self.y + self.radius
         )
+    
+    def resize(self, factor: float) -> None:
+        self.radius *= factor
+
+# Type checking
+def draw_shape(shape: Drawable) -> None:
+    print(shape.draw())
+
+def resize_shape(shape: Resizable, factor: float) -> None:
+    shape.resize(factor)
 ```
 
-### Abstract Factory Pattern
+## Abstract Collections
+
+### Abstract Container Types
 ```python
-class UIElement(ABC):
-    @abstractmethod
-    def render(self) -> str:
-        pass
+from collections.abc import Sequence, MutableSequence
 
-class Button(UIElement):
-    @abstractmethod
-    def click(self) -> str:
-        pass
-
-class TextBox(UIElement):
-    @abstractmethod
-    def get_text(self) -> str:
-        pass
-
-class UIFactory(ABC):
-    @abstractmethod
-    def create_button(self) -> Button:
-        pass
+class ReadOnlyList(Sequence):
+    def __init__(self, data):
+        self._data = list(data)
     
-    @abstractmethod
-    def create_textbox(self) -> TextBox:
-        pass
-
-class ModernButton(Button):
-    def render(self) -> str:
-        return "Rendering modern button"
+    def __len__(self):
+        return len(self._data)
     
-    def click(self) -> str:
-        return "Clicked modern button"
+    def __getitem__(self, index):
+        return self._data[index]
 
-class ModernTextBox(TextBox):
-    def render(self) -> str:
-        return "Rendering modern textbox"
+class EditableList(MutableSequence):
+    def __init__(self):
+        self._data = []
     
-    def get_text(self) -> str:
-        return "Modern textbox content"
-
-class ModernUIFactory(UIFactory):
-    def create_button(self) -> Button:
-        return ModernButton()
+    def __len__(self):
+        return len(self._data)
     
-    def create_textbox(self) -> TextBox:
-        return ModernTextBox()
+    def __getitem__(self, index):
+        return self._data[index]
+    
+    def __setitem__(self, index, value):
+        self._data[index] = value
+    
+    def __delitem__(self, index):
+        del self._data[index]
+    
+    def insert(self, index, value):
+        self._data.insert(index, value)
 ```
 
 ## Best Practices
 
-### Design by Contract
+### Interface Segregation
 ```python
-from abc import ABC, abstractmethod
-from typing import List, Any
-
-class DataValidator(ABC):
+# Bad: Too many methods in one interface
+class AnimalInterface(ABC):
     @abstractmethod
-    def validate(self, data: Any) -> bool:
-        """
-        Validate input data
-        
-        Precondition: data must not be None
-        Postcondition: returns True if data is valid
-        """
-        pass
-
-class DataTransformer(ABC):
-    @abstractmethod
-    def transform(self, data: Any) -> Any:
-        """
-        Transform input data
-        
-        Precondition: data must be valid
-        Postcondition: returned data must be transformed
-        """
-        pass
-
-class Pipeline:
-    def __init__(self, validator: DataValidator, 
-                 transformer: DataTransformer):
-        self.validator = validator
-        self.transformer = transformer
+    def walk(self): pass
     
-    def process(self, data: Any) -> Any:
-        """
-        Process data through the pipeline
-        
-        Preconditions:
-        - data must not be None
-        - validator must be set
-        - transformer must be set
-        
-        Postconditions:
-        - returns None if data is invalid
-        - returns transformed data if valid
-        """
-        assert data is not None, "Data cannot be None"
-        if self.validator.validate(data):
-            return self.transformer.transform(data)
-        return None
+    @abstractmethod
+    def swim(self): pass
+    
+    @abstractmethod
+    def fly(self): pass
+
+# Good: Segregated interfaces
+class Walker(Protocol):
+    def walk(self) -> None: ...
+
+class Swimmer(Protocol):
+    def swim(self) -> None: ...
+
+class Flyer(Protocol):
+    def fly(self) -> None: ...
+
+class Bird(Flyer, Walker):
+    def walk(self) -> None:
+        print("Walking...")
+    
+    def fly(self) -> None:
+        print("Flying...")
 ```
 
 ### Dependency Inversion
 ```python
-class MessageSender(ABC):
-    @abstractmethod
-    def send(self, message: str) -> bool:
+class DataStore(Protocol):
+    def save(self, data: dict) -> None: ...
+    def load(self) -> dict: ...
+
+class FileStorage:
+    def __init__(self, filename: str):
+        self.filename = filename
+    
+    def save(self, data: dict) -> None:
+        with open(self.filename, 'w') as f:
+            json.dump(data, f)
+    
+    def load(self) -> dict:
+        with open(self.filename, 'r') as f:
+            return json.load(f)
+
+class DatabaseStorage:
+    def save(self, data: dict) -> None:
+        # Save to database
+        pass
+    
+    def load(self) -> dict:
+        # Load from database
         pass
 
-class EmailSender(MessageSender):
-    def send(self, message: str) -> bool:
-        # Email sending logic
-        return True
-
-class SMSSender(MessageSender):
-    def send(self, message: str) -> bool:
-        # SMS sending logic
-        return True
-
-class NotificationService:
-    def __init__(self, sender: MessageSender):
-        self.sender = sender
+class UserManager:
+    def __init__(self, storage: DataStore):
+        self.storage = storage
     
-    def notify(self, message: str) -> bool:
-        return self.sender.send(message)
+    def save_user(self, user: dict) -> None:
+        self.storage.save(user)
+    
+    def load_user(self) -> dict:
+        return self.storage.load()
+```
+
+## Advanced Patterns
+
+### Abstract Factory
+```python
+class GUIFactory(ABC):
+    @abstractmethod
+    def create_button(self) -> 'Button':
+        pass
+    
+    @abstractmethod
+    def create_window(self) -> 'Window':
+        pass
+
+class Button(ABC):
+    @abstractmethod
+    def paint(self) -> None:
+        pass
+
+class Window(ABC):
+    @abstractmethod
+    def render(self) -> None:
+        pass
+
+class WindowsFactory(GUIFactory):
+    def create_button(self) -> 'WindowsButton':
+        return WindowsButton()
+    
+    def create_window(self) -> 'WindowsWindow':
+        return WindowsWindow()
+
+class MacFactory(GUIFactory):
+    def create_button(self) -> 'MacButton':
+        return MacButton()
+    
+    def create_window(self) -> 'MacWindow':
+        return MacWindow()
+```
+
+### Template Method
+```python
+class DataMiner(ABC):
+    def mine(self) -> dict:
+        data = self.extract()
+        clean_data = self.transform(data)
+        return self.load(clean_data)
+    
+    @abstractmethod
+    def extract(self) -> list:
+        """Extract data from source"""
+        pass
+    
+    @abstractmethod
+    def transform(self, data: list) -> list:
+        """Clean and transform the data"""
+        pass
+    
+    @abstractmethod
+    def load(self, data: list) -> dict:
+        """Load data into target format"""
+        pass
+
+class CSVDataMiner(DataMiner):
+    def __init__(self, filename: str):
+        self.filename = filename
+    
+    def extract(self) -> list:
+        # Read from CSV
+        pass
+    
+    def transform(self, data: list) -> list:
+        # Clean CSV data
+        pass
+    
+    def load(self, data: list) -> dict:
+        # Convert to dict
+        pass
+```
+
+## Common Design Patterns with Abstractions
+
+### Observer Pattern
+```python
+class Observer(Protocol):
+    def update(self, subject: 'Subject') -> None: ...
+
+class Subject(ABC):
+    def __init__(self):
+        self._observers: list[Observer] = []
+    
+    def attach(self, observer: Observer) -> None:
+        self._observers.append(observer)
+    
+    def detach(self, observer: Observer) -> None:
+        self._observers.remove(observer)
+    
+    def notify(self) -> None:
+        for observer in self._observers:
+            observer.update(self)
+
+class WeatherStation(Subject):
+    def __init__(self):
+        super().__init__()
+        self._temperature = 0
+    
+    @property
+    def temperature(self) -> float:
+        return self._temperature
+    
+    @temperature.setter
+    def temperature(self, value: float) -> None:
+        self._temperature = value
+        self.notify()
 ```
 
 ## Exercises
 
-1. Create an abstract shape hierarchy with different shape implementations
-2. Implement a plugin system using abstract base classes
-3. Design a composite pattern using abstractions
-4. Build a data processing pipeline using abstract classes
-5. Create a strategy pattern implementation using protocols
+1. Create a shape hierarchy using abstract base classes
+2. Implement a plugin system using protocols
+3. Design a data processing pipeline using the template method pattern
+4. Create an event system using the observer pattern
+5. Implement a GUI framework using abstract factories

@@ -4,327 +4,353 @@
 
 ### Descriptor Protocol
 ```python
-class Descriptor:
+class DescriptorExample:
     """Basic descriptor implementation"""
-    def __init__(self, initial_value=None):
-        self.value = initial_value
+    def __init__(self, name=None):
+        self.name = name
     
     def __get__(self, instance, owner):
+        """Get value from descriptor"""
         if instance is None:
             return self
-        return self.value
+        return instance.__dict__.get(self.name)
     
     def __set__(self, instance, value):
-        self.value = value
+        """Set value in descriptor"""
+        instance.__dict__[self.name] = value
     
     def __delete__(self, instance):
-        del self.value
+        """Delete value from descriptor"""
+        del instance.__dict__[self.name]
 
-class Example:
-    x = Descriptor(1)
+class Person:
+    name = DescriptorExample('name')
+    
+    def __init__(self, name):
+        self.name = name
 
 # Using descriptors
-obj = Example()
-print(obj.x)      # 1
-obj.x = 2
-print(obj.x)      # 2
+person = Person("Alice")
+print(person.name)  # Alice
 ```
 
 ### Data Descriptors
 ```python
-class TypedDescriptor:
-    """Descriptor that enforces type checking"""
-    def __init__(self, type_):
-        self.type = type_
-        self._name = None
-    
-    def __set_name__(self, owner, name):
-        self._name = name
+class Validated:
+    """Data descriptor with validation"""
+    def __init__(self, minvalue=None, maxvalue=None):
+        self.minvalue = minvalue
+        self.maxvalue = maxvalue
+        self.name = None
     
     def __get__(self, instance, owner):
         if instance is None:
             return self
-        return instance.__dict__.get(self._name)
+        return instance.__dict__.get(self.name)
     
     def __set__(self, instance, value):
-        if not isinstance(value, self.type):
-            raise TypeError(f"{self._name} must be of type {self.type}")
-        instance.__dict__[self._name] = value
-
-class Person:
-    name = TypedDescriptor(str)
-    age = TypedDescriptor(int)
+        if self.minvalue is not None and value < self.minvalue:
+            raise ValueError(f"Value must be ≥ {self.minvalue}")
+        if self.maxvalue is not None and value > self.maxvalue:
+            raise ValueError(f"Value must be ≤ {self.maxvalue}")
+        instance.__dict__[self.name] = value
     
-    def __init__(self, name, age):
+    def __set_name__(self, owner, name):
         self.name = name
-        self.age = age
+
+class Product:
+    price = Validated(minvalue=0)
+    quantity = Validated(minvalue=0, maxvalue=100)
+    
+    def __init__(self, price, quantity):
+        self.price = price
+        self.quantity = quantity
 ```
 
-## Property Descriptors
-
-### Property Implementation
-```python
-class Property:
-    """Custom implementation of the property descriptor"""
-    def __init__(self, fget=None, fset=None, fdel=None, doc=None):
-        self.fget = fget
-        self.fset = fset
-        self.fdel = fdel
-        self.__doc__ = doc
-    
-    def __get__(self, instance, owner):
-        if instance is None:
-            return self
-        if self.fget is None:
-            raise AttributeError("unreadable attribute")
-        return self.fget(instance)
-    
-    def __set__(self, instance, value):
-        if self.fset is None:
-            raise AttributeError("can't set attribute")
-        self.fset(instance, value)
-    
-    def __delete__(self, instance):
-        if self.fdel is None:
-            raise AttributeError("can't delete attribute")
-        self.fdel(instance)
-    
-    def getter(self, fget):
-        return type(self)(fget, self.fset, self.fdel, self.__doc__)
-    
-    def setter(self, fset):
-        return type(self)(self.fget, fset, self.fdel, self.__doc__)
-    
-    def deleter(self, fdel):
-        return type(self)(self.fget, self.fset, fdel, self.__doc__)
-
-class Circle:
-    def __init__(self, radius):
-        self._radius = radius
-    
-    @Property
-    def radius(self):
-        return self._radius
-    
-    @radius.setter
-    def radius(self, value):
-        if value <= 0:
-            raise ValueError("Radius must be positive")
-        self._radius = value
-```
-
-## Validation Descriptors
-
-### Type Validation
-```python
-class Typed:
-    """Descriptor for type validation"""
-    def __init__(self, type_):
-        self.type = type_
-        self._name = None
-    
-    def __set_name__(self, owner, name):
-        self._name = name
-    
-    def __get__(self, instance, owner):
-        if instance is None:
-            return self
-        return instance.__dict__[self._name]
-    
-    def __set__(self, instance, value):
-        if not isinstance(value, self.type):
-            raise TypeError(f'{self._name} must be a {self.type}')
-        instance.__dict__[self._name] = value
-
-class Integer(Typed):
-    def __init__(self):
-        super().__init__(int)
-
-class String(Typed):
-    def __init__(self):
-        super().__init__(str)
-
-class Float(Typed):
-    def __init__(self):
-        super().__init__(float)
-
-class Point:
-    x = Float()
-    y = Float()
-    
-    def __init__(self, x, y):
-        self.x = x
-        self.y = y
-```
-
-### Range Validation
-```python
-class Positive:
-    """Descriptor that ensures value is positive"""
-    def __init__(self):
-        self._name = None
-    
-    def __set_name__(self, owner, name):
-        self._name = name
-    
-    def __get__(self, instance, owner):
-        if instance is None:
-            return self
-        return instance.__dict__[self._name]
-    
-    def __set__(self, instance, value):
-        if value <= 0:
-            raise ValueError(f'{self._name} must be positive')
-        instance.__dict__[self._name] = value
-
-class Range:
-    """Descriptor for range validation"""
-    def __init__(self, min_val=None, max_val=None):
-        self.min_val = min_val
-        self.max_val = max_val
-        self._name = None
-    
-    def __set_name__(self, owner, name):
-        self._name = name
-    
-    def __get__(self, instance, owner):
-        if instance is None:
-            return self
-        return instance.__dict__[self._name]
-    
-    def __set__(self, instance, value):
-        if self.min_val is not None and value < self.min_val:
-            raise ValueError(f'{self._name} must be ≥ {self.min_val}')
-        if self.max_val is not None and value > self.max_val:
-            raise ValueError(f'{self._name} must be ≤ {self.max_val}')
-        instance.__dict__[self._name] = value
-```
-
-## Computed Attributes
-
-### Lazy Properties
+### Non-Data Descriptors
 ```python
 class LazyProperty:
-    """Descriptor for lazy-loaded attributes"""
-    def __init__(self, func):
-        self.func = func
-        self._name = None
-    
-    def __set_name__(self, owner, name):
-        self._name = name
+    """Non-data descriptor for lazy property computation"""
+    def __init__(self, function):
+        self.function = function
+        self.name = function.__name__
     
     def __get__(self, instance, owner):
         if instance is None:
             return self
         
-        value = self.func(instance)
-        # Cache the computed value
-        instance.__dict__[self._name] = value
+        # Compute value and store in instance dict
+        value = self.function(instance)
+        instance.__dict__[self.name] = value
         return value
-
-class DataProcessor:
-    def __init__(self, filename):
-        self.filename = filename
-    
-    @LazyProperty
-    def data(self):
-        print("Loading data...")
-        with open(self.filename) as f:
-            return f.read()
-```
-
-### Cached Properties
-```python
-class CachedProperty:
-    """Descriptor that caches computed values"""
-    def __init__(self, func):
-        self.func = func
-        self._name = None
-    
-    def __set_name__(self, owner, name):
-        self._name = name
-    
-    def __get__(self, instance, owner):
-        if instance is None:
-            return self
-        
-        cache_name = f'_cached_{self._name}'
-        if not hasattr(instance, cache_name):
-            setattr(instance, cache_name, self.func(instance))
-        return getattr(instance, cache_name)
-    
-    def __delete__(self, instance):
-        cache_name = f'_cached_{self._name}'
-        if hasattr(instance, cache_name):
-            delattr(instance, cache_name)
 
 class Circle:
     def __init__(self, radius):
         self.radius = radius
     
-    @CachedProperty
+    @LazyProperty
     def area(self):
         print("Computing area...")
         return 3.14159 * self.radius ** 2
+
+# Using lazy property
+circle = Circle(5)
+print(circle.area)  # Computes first time
+print(circle.area)  # Uses cached value
 ```
 
-## Best Practices
+## Advanced Descriptors
 
-### Memory Management
+### Property Factory
 ```python
-class WeakrefDescriptor:
-    """Descriptor that uses weak references"""
+def typed_property(name, expected_type):
+    """Create a property with type checking"""
+    storage_name = f'_{name}'
+    
+    @property
+    def prop(self):
+        return getattr(self, storage_name)
+    
+    @prop.setter
+    def prop(self, value):
+        if not isinstance(value, expected_type):
+            raise TypeError(f"{name} must be a {expected_type}")
+        setattr(self, storage_name, value)
+    
+    return prop
+
+class Person:
+    name = typed_property("name", str)
+    age = typed_property("age", int)
+    
+    def __init__(self, name: str, age: int):
+        self.name = name
+        self.age = age
+
+# Using typed properties
+person = Person("Alice", 30)
+# person.age = "30"  # TypeError: age must be a <class 'int'>
+```
+
+### Descriptor with History
+```python
+class HistoryDescriptor:
+    """Descriptor that maintains history of values"""
     def __init__(self):
-        self._values = weakref.WeakKeyDictionary()
+        self.name = None
+    
+    def __set_name__(self, owner, name):
+        self.name = name
     
     def __get__(self, instance, owner):
         if instance is None:
             return self
-        return self._values.get(instance)
+        history = instance.__dict__.get(f'_{self.name}_history', [])
+        return history[-1] if history else None
     
     def __set__(self, instance, value):
-        self._values[instance] = value
+        history_name = f'_{self.name}_history'
+        if history_name not in instance.__dict__:
+            instance.__dict__[history_name] = []
+        instance.__dict__[history_name].append(value)
 
-class Cache:
-    data = WeakrefDescriptor()
+class TrackedPerson:
+    name = HistoryDescriptor()
+    
+    def get_name_history(self):
+        return getattr(self, '_name_history', [])
+
+# Using history tracking
+person = TrackedPerson()
+person.name = "Alice"
+person.name = "Alicia"
+print(person.get_name_history())  # ['Alice', 'Alicia']
 ```
 
-### Descriptor Factory
+### Method Descriptors
 ```python
-def validated(type_, min_val=None, max_val=None):
-    """Factory function for creating validated descriptors"""
-    class Validator:
-        def __init__(self):
-            self._name = None
-        
-        def __set_name__(self, owner, name):
-            self._name = name
-        
-        def __get__(self, instance, owner):
-            if instance is None:
-                return self
-            return instance.__dict__.get(self._name)
-        
-        def __set__(self, instance, value):
-            if not isinstance(value, type_):
-                raise TypeError(f'{self._name} must be a {type_}')
-            if min_val is not None and value < min_val:
-                raise ValueError(f'{self._name} must be ≥ {min_val}')
-            if max_val is not None and value > max_val:
-                raise ValueError(f'{self._name} must be ≤ {max_val}')
-            instance.__dict__[self._name] = value
+class MethodDescriptor:
+    """Descriptor that can act as method or property"""
+    def __init__(self, func):
+        self.func = func
     
-    return Validator()
+    def __get__(self, instance, owner):
+        if instance is None:
+            return self
+        return lambda *args, **kwargs: self.func(instance, *args, **kwargs)
 
-class Person:
-    age = validated(int, 0, 150)
-    height = validated(float, 0)
+class Calculator:
+    @MethodDescriptor
+    def add(self, x, y):
+        return x + y
+    
+    @MethodDescriptor
+    def multiply(self, x, y):
+        return x * y
+
+# Using method descriptor
+calc = Calculator()
+print(calc.add(2, 3))       # 5
+print(calc.multiply(2, 3))  # 6
+```
+
+## Practical Applications
+
+### Validation and Type Checking
+```python
+class Validated:
+    """Generic validator descriptor"""
+    def __init__(self, *validators):
+        self.validators = validators
+        self.name = None
+    
+    def __set_name__(self, owner, name):
+        self.name = name
+    
+    def __get__(self, instance, owner):
+        if instance is None:
+            return self
+        return instance.__dict__.get(self.name)
+    
+    def __set__(self, instance, value):
+        for validator in self.validators:
+            validator(value)
+        instance.__dict__[self.name] = value
+
+# Validator functions
+def positive(value):
+    if value <= 0:
+        raise ValueError("Value must be positive")
+
+def max_length(length):
+    def validate(value):
+        if len(str(value)) > length:
+            raise ValueError(f"Value must not exceed {length} characters")
+    return validate
+
+class Product:
+    price = Validated(positive)
+    name = Validated(max_length(50))
+```
+
+### Computed Properties
+```python
+class ComputedProperty:
+    """Property that depends on other attributes"""
+    def __init__(self, compute_func):
+        self.compute_func = compute_func
+        self.name = compute_func.__name__
+    
+    def __get__(self, instance, owner):
+        if instance is None:
+            return self
+        return self.compute_func(instance)
+
+class Rectangle:
+    def __init__(self, width, height):
+        self.width = width
+        self.height = height
+    
+    @ComputedProperty
+    def area(self):
+        return self.width * self.height
+    
+    @ComputedProperty
+    def perimeter(self):
+        return 2 * (self.width + self.height)
+```
+
+### Unit Conversion
+```python
+class Unit:
+    """Descriptor for unit conversion"""
+    def __init__(self, unit_type):
+        self.unit_type = unit_type
+        self.name = None
+    
+    def __set_name__(self, owner, name):
+        self.name = name
+    
+    def __get__(self, instance, owner):
+        if instance is None:
+            return self
+        return instance.__dict__[self.name]
+    
+    def __set__(self, instance, value):
+        if self.unit_type == "temperature":
+            instance.__dict__[self.name] = value
+            instance.__dict__[f"{self.name}_fahrenheit"] = (value * 9/5) + 32
+        elif self.unit_type == "distance":
+            instance.__dict__[self.name] = value
+            instance.__dict__[f"{self.name}_feet"] = value * 3.28084
+
+class Measurement:
+    celsius = Unit("temperature")
+    meters = Unit("distance")
+    
+    def __init__(self, celsius, meters):
+        self.celsius = celsius
+        self.meters = meters
+```
+
+## Best Practices
+
+### Performance Considerations
+```python
+class CachedProperty:
+    """Property with caching and optional timeout"""
+    def __init__(self, func, timeout=None):
+        self.func = func
+        self.timeout = timeout
+        self.name = func.__name__
+        self.cache_name = f'_cached_{func.__name__}'
+        self.timestamp_name = f'_timestamp_{func.__name__}'
+    
+    def __get__(self, instance, owner):
+        if instance is None:
+            return self
+        
+        now = time.time()
+        if (self.cache_name in instance.__dict__ and
+            (self.timeout is None or
+             now - getattr(instance, self.timestamp_name, 0) < self.timeout)):
+            return instance.__dict__[self.cache_name]
+        
+        value = self.func(instance)
+        instance.__dict__[self.cache_name] = value
+        if self.timeout is not None:
+            instance.__dict__[self.timestamp_name] = now
+        return value
+```
+
+### Error Handling
+```python
+class SafeDescriptor:
+    """Descriptor with error handling"""
+    def __init__(self, name=None, default=None):
+        self.name = name
+        self.default = default
+    
+    def __get__(self, instance, owner):
+        if instance is None:
+            return self
+        try:
+            return instance.__dict__.get(self.name, self.default)
+        except Exception as e:
+            print(f"Error accessing {self.name}: {e}")
+            return self.default
+    
+    def __set__(self, instance, value):
+        try:
+            instance.__dict__[self.name] = value
+        except Exception as e:
+            print(f"Error setting {self.name}: {e}")
 ```
 
 ## Exercises
 
-1. Create a descriptor that validates email addresses
-2. Implement a descriptor for logging attribute access
-3. Build a descriptor that implements unit conversion
-4. Create a descriptor for managing database fields
-5. Implement a descriptor that supports default values
+1. Create a descriptor for automatic data type conversion
+2. Implement a descriptor that maintains an audit log of attribute changes
+3. Create a descriptor for attribute value range validation
+4. Implement a descriptor for lazy loading of expensive resources
+5. Create a descriptor for managing database column mappings

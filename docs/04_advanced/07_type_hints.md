@@ -1,293 +1,294 @@
 # Python Type Hints
 
-## Basic Types
+## Basic Type Hints
 
-### Built-in Types
-```python
-def greet(name: str) -> str:
-    return f"Hello, {name}"
-
-def calculate_age(birth_year: int) -> int:
-    return 2025 - birth_year
-
-def is_adult(age: int) -> bool:
-    return age >= 18
-
-def get_price(amount: float) -> str:
-    return f"${amount:.2f}"
-```
-
-### Collections
+### Variable Annotations
 ```python
 from typing import List, Dict, Set, Tuple
 
-def process_numbers(numbers: List[int]) -> int:
-    return sum(numbers)
+# Basic type hints
+name: str = "John"
+age: int = 30
+height: float = 1.75
+is_active: bool = True
 
-def get_user_data() -> Dict[str, str]:
-    return {"name": "John", "email": "john@example.com"}
-
-def unique_tags(tags: Set[str]) -> int:
-    return len(tags)
-
-def get_coordinates() -> Tuple[float, float]:
-    return (40.7128, -74.0060)
+# Container types
+numbers: List[int] = [1, 2, 3]
+pairs: Dict[str, int] = {"one": 1, "two": 2}
+unique_items: Set[str] = {"apple", "banana"}
+coordinates: Tuple[float, float] = (1.0, 2.0)
 ```
 
-## Optional and Union Types
-
-### Optional Values
+### Function Annotations
 ```python
-from typing import Optional
+from typing import Optional, Union
 
-def find_user(user_id: int) -> Optional[str]:
-    users = {1: "John", 2: "Jane"}
-    return users.get(user_id)
-
-def greet_user(name: Optional[str] = None) -> str:
-    if name is None:
-        return "Hello, Guest"
+def greet(name: str) -> str:
+    """Basic function with type hints"""
     return f"Hello, {name}"
+
+def process_data(data: Optional[str] = None) -> Union[str, None]:
+    """Function with optional parameter"""
+    if data is None:
+        return None
+    return data.upper()
+
+def calculate_total(items: List[float], tax_rate: float = 0.1) -> float:
+    """Function with container type hint"""
+    subtotal = sum(items)
+    return subtotal * (1 + tax_rate)
 ```
 
-### Union Types
-```python
-from typing import Union
+## Advanced Type Hints
 
-def process_data(data: Union[str, bytes]) -> str:
-    if isinstance(data, bytes):
-        return data.decode('utf-8')
+### Custom Types
+```python
+from typing import TypeVar, Generic, NewType
+
+# Type variables
+T = TypeVar('T')
+Number = TypeVar('Number', int, float)
+
+# Custom types
+UserId = NewType('UserId', int)
+Email = NewType('Email', str)
+
+class Box(Generic[T]):
+    """Generic container class"""
+    def __init__(self, item: T) -> None:
+        self.item = item
+    
+    def get(self) -> T:
+        return self.item
+
+# Using custom types
+user_id: UserId = UserId(123)
+email: Email = Email("user@example.com")
+int_box: Box[int] = Box(42)
+str_box: Box[str] = Box("Hello")
+```
+
+### Complex Types
+```python
+from typing import Callable, Iterator, Generator, Any
+
+# Function types
+Handler = Callable[[str, int], bool]
+
+def process_with_handler(data: str, handler: Handler) -> bool:
+    """Function using callable type"""
+    return handler(data, len(data))
+
+# Iterator types
+def count_up(limit: int) -> Iterator[int]:
+    """Function returning iterator"""
+    counter = 0
+    while counter < limit:
+        yield counter
+        counter += 1
+
+# Generator types
+def number_generator() -> Generator[int, None, None]:
+    """Generator function with type hints"""
+    yield from range(10)
+
+# Any type
+def process_any(data: Any) -> Any:
+    """Function accepting any type"""
     return data
-
-def format_number(num: Union[int, float]) -> str:
-    return f"{num:.2f}"
 ```
 
-## Generic Types
-
-### Type Variables
+### Type Aliases
 ```python
-from typing import TypeVar, List
+from typing import Union, Dict, List
 
-T = TypeVar('T')
+# Complex type aliases
+JsonDict = Dict[str, Union[str, int, float, bool, None]]
+Matrix = List[List[float]]
+NestedDict = Dict[str, Union[str, 'NestedDict']]
 
-def first_element(lst: List[T]) -> Optional[T]:
-    return lst[0] if lst else None
+def process_json(data: JsonDict) -> str:
+    """Process JSON-like dictionary"""
+    return str(data)
 
-def swap_elements(a: T, b: T) -> Tuple[T, T]:
-    return b, a
+def matrix_multiply(a: Matrix, b: Matrix) -> Matrix:
+    """Matrix multiplication with type hints"""
+    # Implementation omitted
+    return [[0.0]]
+
+def process_nested(data: NestedDict) -> None:
+    """Process nested dictionary structure"""
+    pass
 ```
 
-### Generic Classes
+## Practical Applications
+
+### Class Typing
 ```python
-from typing import Generic, TypeVar
+from typing import ClassVar, Final
+from dataclasses import dataclass
 
-T = TypeVar('T')
+class Configuration:
+    """Class with type hints"""
+    DEBUG: ClassVar[bool] = False  # Class variable
+    API_KEY: Final[str] = "secret"  # Constant
+    
+    def __init__(self, host: str, port: int) -> None:
+        self.host: str = host
+        self.port: int = port
+    
+    @classmethod
+    def create_default(cls) -> 'Configuration':
+        return cls("localhost", 8080)
 
-class Stack(Generic[T]):
-    def __init__(self) -> None:
-        self.items: List[T] = []
-    
-    def push(self, item: T) -> None:
-        self.items.append(item)
-    
-    def pop(self) -> Optional[T]:
-        return self.items.pop() if self.items else None
-    
-    def peek(self) -> Optional[T]:
-        return self.items[-1] if self.items else None
+@dataclass
+class User:
+    """Dataclass with type hints"""
+    name: str
+    age: int
+    email: Optional[str] = None
 ```
 
-## Protocol Types
-
-### Basic Protocol
+### Protocol Types
 ```python
-from typing import Protocol
+from typing import Protocol, runtime_checkable
 
+@runtime_checkable
 class Drawable(Protocol):
+    """Protocol defining drawable interface"""
     def draw(self) -> None:
+        """Draw the object"""
         ...
 
 class Circle:
+    """Class implementing Drawable protocol"""
     def draw(self) -> None:
         print("Drawing circle")
 
 class Square:
+    """Another class implementing Drawable protocol"""
     def draw(self) -> None:
         print("Drawing square")
 
-def render(shape: Drawable) -> None:
+def draw_shape(shape: Drawable) -> None:
+    """Function accepting any Drawable object"""
     shape.draw()
 ```
 
-### Complex Protocol
+### Type Guards
 ```python
-from typing import Protocol, Iterator
+from typing import TypeGuard, Union, overload
 
-class Openable(Protocol):
-    def open(self) -> None:
-        ...
-    def close(self) -> None:
-        ...
-    def read(self) -> str:
-        ...
+def is_string_list(value: List[Any]) -> TypeGuard[List[str]]:
+    """Type guard for list of strings"""
+    return all(isinstance(x, str) for x in value)
 
-class File:
-    def open(self) -> None:
-        pass
-    def close(self) -> None:
-        pass
-    def read(self) -> str:
-        return "file contents"
+def process_strings(items: List[Any]) -> None:
+    """Function using type guard"""
+    if is_string_list(items):
+        # Type checker knows items is List[str]
+        for item in items:
+            print(item.upper())
 
-def process_file(file: Openable) -> str:
-    file.open()
-    try:
-        return file.read()
-    finally:
-        file.close()
-```
+@overload
+def get_value(key: str) -> str: ...
+@overload
+def get_value(key: int) -> int: ...
 
-## Type Aliases
-
-### Simple Aliases
-```python
-from typing import Dict, List, Union
-
-JSON = Dict[str, Union[str, int, float, bool, None]]
-Vector = List[float]
-Matrix = List[Vector]
-
-def process_json(data: JSON) -> None:
-    pass
-
-def matrix_multiply(a: Matrix, b: Matrix) -> Matrix:
-    pass
-```
-
-### Complex Aliases
-```python
-from typing import Callable, TypeVar
-
-T = TypeVar('T')
-Predicate = Callable[[T], bool]
-Transformer = Callable[[T], T]
-
-def filter_list(lst: List[T], pred: Predicate[T]) -> List[T]:
-    return [x for x in lst if pred(x)]
-
-def transform_list(lst: List[T], func: Transformer[T]) -> List[T]:
-    return [func(x) for x in lst]
-```
-
-## Type Checking
-
-### Runtime Checks
-```python
-from typing import cast, Any
-
-def process_string(s: Any) -> str:
-    # Runtime type check
-    if not isinstance(s, str):
-        raise TypeError("Expected str")
-    return s.upper()
-
-def safe_divide(a: Any, b: Any) -> float:
-    # Type casting
-    x = cast(float, a)
-    y = cast(float, b)
-    return x / y
-```
-
-### Static Type Checking
-```python
-# mypy configuration
-"""
-[mypy]
-disallow_untyped_defs = True
-disallow_incomplete_defs = True
-check_untyped_defs = True
-disallow_untyped_decorators = True
-no_implicit_optional = True
-warn_redundant_casts = True
-warn_unused_ignores = True
-warn_return_any = True
-warn_unreachable = True
-strict_optional = True
-"""
-
-# Type-checked function
-def calculate_average(numbers: List[float]) -> float:
-    if not numbers:
-        raise ValueError("Empty list")
-    return sum(numbers) / len(numbers)
+def get_value(key: Union[str, int]) -> Union[str, int]:
+    """Function with multiple signatures"""
+    return str(key) if isinstance(key, str) else key
 ```
 
 ## Best Practices
 
-### Type Documentation
+### Type Comments
 ```python
-from typing import Dict, List, Optional
+# Python 2 compatibility
+def legacy_function(name, age):
+    # type: (str, int) -> str
+    return f"{name} is {age} years old"
 
-class User:
-    """
-    Represents a user in the system.
-    
-    Attributes:
-        name (str): The user's full name
-        email (str): The user's email address
-        age (Optional[int]): The user's age, if known
-    """
-    def __init__(
-        self,
-        name: str,
-        email: str,
-        age: Optional[int] = None
-    ) -> None:
-        self.name = name
-        self.email = email
-        self.age = age
-
-    def to_dict(self) -> Dict[str, Union[str, Optional[int]]]:
-        """
-        Convert user to dictionary representation.
-        
-        Returns:
-            Dict containing user data with typed keys and values.
-        """
-        return {
-            "name": self.name,
-            "email": self.email,
-            "age": self.age
-        }
+# Variable type comments
+x = []  # type: List[int]
 ```
 
-### Type Safety
+### Optional and Union
 ```python
-from typing import overload, Union
+from typing import Optional, Union
 
-class SafeList:
-    """A type-safe list implementation."""
-    
-    @overload
-    def __getitem__(self, index: int) -> T: ...
-    
-    @overload
-    def __getitem__(self, index: slice) -> List[T]: ...
-    
-    def __getitem__(
-        self,
-        index: Union[int, slice]
-    ) -> Union[T, List[T]]:
-        if isinstance(index, slice):
-            return self.items[index]
-        return self.items[index]
+def process_input(data: Optional[str]) -> Union[str, int]:
+    """Function with optional input and union return"""
+    if data is None:
+        return 0
+    return data.upper()
+
+def update_record(
+    name: str,
+    age: Optional[int] = None,
+    email: Union[str, None] = None
+) -> None:
+    """Function with multiple optional parameters"""
+    pass
+```
+
+### Type Ignore Comments
+```python
+# Ignore all errors in file
+# type: ignore
+
+# Ignore specific error
+x = "hello"  # type: ignore[assignment]
+
+# Ignore import error
+from module import missing  # type: ignore[import]
+```
+
+## Common Patterns
+
+### Factory Functions
+```python
+from typing import TypeVar, Type
+
+T = TypeVar('T')
+
+class Animal:
+    def speak(self) -> str:
+        return "Generic animal sound"
+
+class Dog(Animal):
+    def speak(self) -> str:
+        return "Woof!"
+
+def create_animal(animal_type: Type[T]) -> T:
+    """Factory function with generic type"""
+    return animal_type()
+
+# Using factory function
+dog: Dog = create_animal(Dog)
+```
+
+### Container Types
+```python
+from typing import Sequence, Mapping, MutableMapping
+
+def process_sequence(seq: Sequence[int]) -> List[int]:
+    """Function accepting any sequence type"""
+    return list(reversed(seq))
+
+def update_mapping(
+    data: MutableMapping[str, int],
+    updates: Mapping[str, int]
+) -> None:
+    """Function working with mapping types"""
+    for key, value in updates.items():
+        data[key] = value
 ```
 
 ## Exercises
 
-1. Create a generic cache implementation with type hints
-2. Implement a type-safe event system using Protocols
-3. Build a data validation system using type hints
-4. Create a type-safe API client with proper error handling
-5. Implement a generic tree structure with type hints
+1. Implement a generic cache decorator with type hints
+2. Create a type-safe event system using Protocol
+3. Design a configuration system with typed settings
+4. Implement a generic repository pattern with type hints
+5. Create a type-safe builder pattern implementation

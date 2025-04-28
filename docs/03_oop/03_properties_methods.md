@@ -4,110 +4,141 @@
 
 ### Basic Property Usage
 ```python
-class Circle:
-    def __init__(self, radius):
-        self._radius = radius
-    
-    @property
-    def radius(self):
-        """Get the circle's radius"""
-        return self._radius
-    
-    @radius.setter
-    def radius(self, value):
-        """Set the circle's radius"""
-        if value <= 0:
-            raise ValueError("Radius must be positive")
-        self._radius = value
-    
-    @property
-    def area(self):
-        """Calculate area of the circle"""
-        return 3.14159 * self._radius ** 2
-    
-    @property
-    def circumference(self):
-        """Calculate circumference of the circle"""
-        return 2 * 3.14159 * self._radius
-```
-
-### Property Decorators
-```python
 class Temperature:
-    def __init__(self):
-        self._celsius = 0
+    def __init__(self, celsius=0):
+        self._celsius = celsius
     
-    # Getter
     @property
     def celsius(self):
         return self._celsius
     
-    # Setter
     @celsius.setter
     def celsius(self, value):
         if value < -273.15:
             raise ValueError("Temperature below absolute zero!")
         self._celsius = value
     
-    # Deleter
-    @celsius.deleter
-    def celsius(self):
-        print("Resetting temperature...")
-        self._celsius = 0
-    
-    # Read-only property
     @property
-    def kelvin(self):
-        return self._celsius + 273.15
+    def fahrenheit(self):
+        return (self._celsius * 9/5) + 32
+    
+    @fahrenheit.setter
+    def fahrenheit(self, value):
+        self.celsius = (value - 32) * 5/9
+
+# Using properties
+temp = Temperature()
+temp.celsius = 25              # Using celsius setter
+print(temp.fahrenheit)         # Using fahrenheit getter
+temp.fahrenheit = 100         # Using fahrenheit setter
+print(temp.celsius)           # Using celsius getter
 ```
 
-### Property Factory Function
+### Property Decorators
+
+#### Read-Only Properties
+```python
+class Circle:
+    def __init__(self, radius):
+        self._radius = radius
+    
+    @property
+    def radius(self):
+        return self._radius
+    
+    @property
+    def area(self):
+        return 3.14159 * self._radius ** 2
+    
+    @property
+    def circumference(self):
+        return 2 * 3.14159 * self._radius
+
+circle = Circle(5)
+print(circle.area)           # Can read
+# circle.area = 50          # AttributeError: can't set attribute
+```
+
+#### Property with Validation
 ```python
 class Person:
-    def __init__(self):
-        self._name = ''
+    def __init__(self, name, age):
+        self._name = name
+        self._age = age
     
-    # Using property() function
-    def get_name(self):
+    @property
+    def name(self):
         return self._name
     
-    def set_name(self, value):
+    @name.setter
+    def name(self, value):
         if not isinstance(value, str):
             raise TypeError("Name must be a string")
-        self._name = value
+        if not value.strip():
+            raise ValueError("Name cannot be empty")
+        self._name = value.strip()
     
-    def del_name(self):
-        del self._name
+    @property
+    def age(self):
+        return self._age
     
-    name = property(
-        fget=get_name,
-        fset=set_name,
-        fdel=del_name,
-        doc="The person's name"
-    )
+    @age.setter
+    def age(self, value):
+        if not isinstance(value, (int, float)):
+            raise TypeError("Age must be a number")
+        if value < 0:
+            raise ValueError("Age cannot be negative")
+        self._age = value
+```
+
+### Computed Properties
+```python
+from datetime import datetime
+
+class Employee:
+    def __init__(self, first_name, last_name, birth_year):
+        self.first_name = first_name
+        self.last_name = last_name
+        self.birth_year = birth_year
+    
+    @property
+    def full_name(self):
+        return f"{self.first_name} {self.last_name}"
+    
+    @property
+    def age(self):
+        return datetime.now().year - self.birth_year
+    
+    @property
+    def email(self):
+        return f"{self.first_name.lower()}.{self.last_name.lower()}@company.com"
 ```
 
 ## Methods
 
 ### Instance Methods
 ```python
-class Rectangle:
-    def __init__(self, width, height):
-        self.width = width
-        self.height = height
+class BankAccount:
+    def __init__(self, balance=0):
+        self._balance = balance
+        self._transactions = []
     
-    # Regular instance method
-    def area(self):
-        return self.width * self.height
+    def deposit(self, amount):
+        """Instance method that modifies object state"""
+        if amount <= 0:
+            raise ValueError("Amount must be positive")
+        self._balance += amount
+        self._transactions.append(("deposit", amount))
+        return self._balance
     
-    # Method with parameters
-    def resize(self, width_factor, height_factor):
-        self.width *= width_factor
-        self.height *= height_factor
+    def get_transaction_history(self):
+        """Instance method that accesses object state"""
+        return self._transactions.copy()
     
-    # Method that returns multiple values
-    def dimensions(self):
-        return self.width, self.height
+    def transfer(self, other_account, amount):
+        """Instance method that interacts with other objects"""
+        self._balance -= amount
+        other_account.deposit(amount)
 ```
 
 ### Class Methods
@@ -119,239 +150,261 @@ class Date:
         self.day = day
     
     @classmethod
-    def from_string(cls, date_str):
-        """Create a Date object from a string"""
-        year, month, day = map(int, date_str.split('-'))
+    def from_string(cls, date_string):
+        """Create instance from string YYYY-MM-DD"""
+        year, month, day = map(int, date_string.split('-'))
         return cls(year, month, day)
     
     @classmethod
     def today(cls):
-        """Create a Date object with today's date"""
-        import datetime
-        today = datetime.datetime.now()
+        """Create instance with today's date"""
+        from datetime import datetime
+        today = datetime.now()
         return cls(today.year, today.month, today.day)
+    
+    @classmethod
+    def validate(cls, year, month, day):
+        """Validate date parameters"""
+        if not (1 <= month <= 12):
+            raise ValueError("Invalid month")
+        if not (1 <= day <= 31):
+            raise ValueError("Invalid day")
+        return True
 ```
 
 ### Static Methods
 ```python
-class MathUtils:
+class MathOperations:
     @staticmethod
-    def is_even(number):
-        return number % 2 == 0
+    def is_even(num):
+        return num % 2 == 0
     
     @staticmethod
-    def is_prime(number):
-        if number < 2:
+    def is_prime(num):
+        if num < 2:
             return False
-        for i in range(2, int(number ** 0.5) + 1):
-            if number % i == 0:
+        for i in range(2, int(num ** 0.5) + 1):
+            if num % i == 0:
                 return False
         return True
     
     @staticmethod
-    def factorial(number):
-        if number < 0:
-            raise ValueError("Factorial is not defined for negative numbers")
-        if number == 0:
+    def factorial(num):
+        if num < 0:
+            raise ValueError("Factorial not defined for negative numbers")
+        if num == 0:
             return 1
-        return number * MathUtils.factorial(number - 1)
+        return num * MathOperations.factorial(num - 1)
 ```
 
-## Private and Protected Members
-
-### Name Mangling
-```python
-class Account:
-    def __init__(self, balance):
-        self.__balance = balance  # Private attribute
-        self._transactions = []   # Protected attribute
-    
-    def deposit(self, amount):
-        if amount > 0:
-            self.__balance += amount
-            self._transactions.append(('deposit', amount))
-    
-    def __update_balance(self):  # Private method
-        # Internal processing
-        pass
-    
-    def _validate_transaction(self):  # Protected method
-        # Validation logic
-        pass
-```
-
-### Property Access Control
-```python
-class Employee:
-    def __init__(self):
-        self.__salary = 0
-        self.__name = ''
-    
-    @property
-    def salary(self):
-        return self.__salary
-    
-    @salary.setter
-    def salary(self, value):
-        if self.__validate_salary(value):
-            self.__salary = value
-    
-    def __validate_salary(self, value):
-        return isinstance(value, (int, float)) and value >= 0
-```
-
-## Method Types and Usage
-
-### Magic Methods
-```python
-class Vector:
-    def __init__(self, x, y):
-        self.x = x
-        self.y = y
-    
-    def __add__(self, other):
-        return Vector(self.x + other.x, self.y + other.y)
-    
-    def __sub__(self, other):
-        return Vector(self.x - other.x, self.y - other.y)
-    
-    def __mul__(self, scalar):
-        return Vector(self.x * scalar, self.y * scalar)
-    
-    def __str__(self):
-        return f"Vector({self.x}, {self.y})"
-    
-    def __eq__(self, other):
-        return self.x == other.x and self.y == other.y
-```
+## Advanced Method Patterns
 
 ### Method Chaining
 ```python
-class StringBuilder:
+class QueryBuilder:
     def __init__(self):
-        self._strings = []
+        self.query = []
+        self.params = []
     
-    def append(self, string):
-        self._strings.append(string)
+    def select(self, *fields):
+        self.query.append(f"SELECT {', '.join(fields)}")
         return self
     
-    def prepend(self, string):
-        self._strings.insert(0, string)
+    def from_table(self, table):
+        self.query.append(f"FROM {table}")
         return self
     
-    def remove_last(self):
-        if self._strings:
-            self._strings.pop()
+    def where(self, condition, param):
+        self.query.append(f"WHERE {condition}")
+        self.params.append(param)
         return self
     
     def build(self):
-        return ''.join(self._strings)
+        return " ".join(self.query), tuple(self.params)
+
+# Using method chaining
+query = (QueryBuilder()
+         .select("name", "age")
+         .from_table("users")
+         .where("age > ?", 18)
+         .build())
 ```
 
-## Advanced Property Patterns
-
-### Computed Properties
+### Context Manager Methods
 ```python
-class Rectangle:
-    def __init__(self, width, height):
-        self._width = width
-        self._height = height
-        self._area = None
-        self._perimeter = None
+class DatabaseConnection:
+    def __init__(self, connection_string):
+        self.connection_string = connection_string
+        self.connection = None
     
-    @property
-    def width(self):
-        return self._width
+    def __enter__(self):
+        """Set up the context"""
+        self.connection = self.connect()
+        return self.connection
     
-    @width.setter
-    def width(self, value):
-        self._width = value
-        # Invalidate cached computations
-        self._area = None
-        self._perimeter = None
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Clean up the context"""
+        if self.connection:
+            self.connection.close()
     
-    @property
-    def area(self):
-        if self._area is None:
-            self._area = self._width * self._height
-        return self._area
+    def connect(self):
+        # Simulated database connection
+        print(f"Connecting to {self.connection_string}")
+        return self
+
+# Using as context manager
+with DatabaseConnection("mysql://localhost") as conn:
+    # Work with database
+    pass  # Connection automatically closed
 ```
 
-### Property Dependencies
+### Descriptor Methods
 ```python
-class Person:
-    def __init__(self, first_name, last_name):
-        self._first_name = first_name
-        self._last_name = last_name
-        self._full_name = None
+class Validator:
+    def __init__(self, min_value=None, max_value=None):
+        self.min_value = min_value
+        self.max_value = max_value
     
-    @property
-    def first_name(self):
-        return self._first_name
+    def __get__(self, instance, owner):
+        if instance is None:
+            return self
+        return instance.__dict__.get(self.name)
     
-    @first_name.setter
-    def first_name(self, value):
-        self._first_name = value
-        self._full_name = None  # Invalidate cached full name
+    def __set__(self, instance, value):
+        if self.min_value is not None and value < self.min_value:
+            raise ValueError(f"Value must be ≥ {self.min_value}")
+        if self.max_value is not None and value > self.max_value:
+            raise ValueError(f"Value must be ≤ {self.max_value}")
+        instance.__dict__[self.name] = value
     
-    @property
-    def full_name(self):
-        if self._full_name is None:
-            self._full_name = f"{self._first_name} {self._last_name}"
-        return self._full_name
+    def __set_name__(self, owner, name):
+        self.name = name
+
+class Product:
+    price = Validator(min_value=0)
+    quantity = Validator(min_value=0, max_value=100)
+    
+    def __init__(self, name, price, quantity):
+        self.name = name
+        self.price = price
+        self.quantity = quantity
 ```
 
 ## Best Practices
 
-### Property Usage Guidelines
+### Property vs Direct Attribute Access
 ```python
-class BankAccount:
-    def __init__(self, balance):
-        self._balance = balance
+# Bad: Direct attribute access
+class Circle:
+    def __init__(self, radius):
+        self.radius = radius  # No validation
+
+# Good: Property with validation
+class Circle:
+    def __init__(self, radius):
+        self._radius = 0  # Initialize first
+        self.radius = radius  # Use property setter
     
-    # Use properties for computed or validated attributes
     @property
-    def balance(self):
-        return self._balance
+    def radius(self):
+        return self._radius
     
-    # Use properties to encapsulate business logic
-    @property
-    def is_overdrawn(self):
-        return self._balance < 0
-    
-    # Use methods for actions
-    def deposit(self, amount):
-        if amount > 0:
-            self._balance += amount
-            return True
-        return False
+    @radius.setter
+    def radius(self, value):
+        if value < 0:
+            raise ValueError("Radius cannot be negative")
+        self._radius = value
 ```
 
-### Method Naming Conventions
+### Method Organization
 ```python
 class DataProcessor:
-    def process_data(self):
-        """Verb phrase for actions"""
-        pass
+    """Example of well-organized methods"""
+    
+    def __init__(self, data):
+        self.data = data
+    
+    # Public interface
+    def process(self):
+        """Main public method"""
+        cleaned_data = self._clean_data()
+        normalized_data = self._normalize(cleaned_data)
+        return self._format_output(normalized_data)
+    
+    # Helper methods (private)
+    def _clean_data(self):
+        """Remove invalid entries"""
+        return [x for x in self.data if self._is_valid(x)]
+    
+    def _normalize(self, data):
+        """Normalize the values"""
+        return [self._normalize_value(x) for x in data]
+    
+    def _format_output(self, data):
+        """Format the final output"""
+        return {
+            "processed_data": data,
+            "count": len(data)
+        }
+    
+    def _is_valid(self, value):
+        """Validate a single value"""
+        return value is not None
+    
+    def _normalize_value(self, value):
+        """Normalize a single value"""
+        return value / max(self.data)
+```
+
+## Common Patterns
+
+### Lazy Properties
+```python
+class ExpensiveComputation:
+    def __init__(self, data):
+        self.data = data
+        self._cached_result = None
     
     @property
-    def is_valid(self):
-        """Noun phrase for states/properties"""
-        pass
+    def result(self):
+        if self._cached_result is None:
+            # Expensive computation
+            print("Computing...")
+            self._cached_result = sum(x * x for x in self.data)
+        return self._cached_result
+
+comp = ExpensiveComputation(range(1000))
+print(comp.result)  # Computes first time
+print(comp.result)  # Returns cached value
+```
+
+### Factory Methods
+```python
+class Document:
+    def __init__(self, content):
+        self.content = content
     
-    def _internal_helper(self):
-        """Underscore prefix for internal methods"""
-        pass
+    @classmethod
+    def from_file(cls, filename):
+        with open(filename, 'r') as f:
+            content = f.read()
+        return cls(content)
     
-    def __secure_operation(self):
-        """Double underscore for strong privacy"""
-        pass
+    @classmethod
+    def from_string(cls, string):
+        return cls(string)
+    
+    @classmethod
+    def from_json(cls, json_string):
+        import json
+        data = json.loads(json_string)
+        return cls(data.get('content', ''))
 ```
 
 ## Exercises
 
-1. Create a class with computed properties that cache their values
-2. Implement a class with method chaining for building complex objects
-3. Design a class with properties that maintain data consistency
-4. Create a class using name mangling for secure data handling
-5. Implement a class that uses all three types of methods (instance, class, static)
+1. Create a Temperature class with Celsius and Fahrenheit properties
+2. Implement a BankAccount class with properties for balance and methods for transactions
+3. Design a Rectangle class with properties for area and perimeter
+4. Create a Person class with full_name property and age validation
+5. Implement a DataProcessor class with method chaining for data transformations

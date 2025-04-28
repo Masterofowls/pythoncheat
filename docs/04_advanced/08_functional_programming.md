@@ -1,53 +1,14 @@
 # Functional Programming in Python
 
-## First-Class Functions
+## Core Concepts
 
-### Functions as Objects
+### Pure Functions
 ```python
-def square(x: int) -> int:
-    return x * x
+# Pure function - same input always produces same output
+def multiply(x: int, y: int) -> int:
+    return x * y
 
-def cube(x: int) -> int:
-    return x * x * x
-
-# Storing functions in variables
-func = square
-result = func(4)  # 16
-
-# Functions in data structures
-operations = [square, cube]
-results = [func(3) for func in operations]  # [9, 27]
-```
-
-### Higher-Order Functions
-```python
-from typing import Callable, List
-
-def apply_twice(func: Callable[[int], int], x: int) -> int:
-    return func(func(x))
-
-def create_multiplier(factor: int) -> Callable[[int], int]:
-    def multiplier(x: int) -> int:
-        return x * factor
-    return multiplier
-
-# Using higher-order functions
-double = create_multiplier(2)
-print(double(5))  # 10
-
-triple = create_multiplier(3)
-print(triple(5))  # 15
-```
-
-## Pure Functions
-
-### Characteristics
-```python
-# Pure function - same input always gives same output
-def add(x: int, y: int) -> int:
-    return x + y
-
-# Impure function - depends on external state
+# Impure function - result depends on external state
 counter = 0
 def increment() -> int:
     global counter
@@ -55,203 +16,290 @@ def increment() -> int:
     return counter
 ```
 
-### Benefits of Pure Functions
+### Immutability
 ```python
-from typing import List
+from typing import Tuple, List, Dict
+from dataclasses import dataclass
+from collections.abc import Sequence
 
-# Pure function - easy to test and reason about
-def merge_sorted_lists(list1: List[int], list2: List[int]) -> List[int]:
-    result = []
-    i = j = 0
+# Immutable data structures
+@dataclass(frozen=True)
+class Point:
+    x: float
+    y: float
     
-    while i < len(list1) and j < len(list2):
-        if list1[i] <= list2[j]:
-            result.append(list1[i])
-            i += 1
-        else:
-            result.append(list2[j])
-            j += 1
-    
-    result.extend(list1[i:])
-    result.extend(list2[j:])
-    return result
+    def move(self, dx: float, dy: float) -> 'Point':
+        """Returns new instance instead of modifying"""
+        return Point(self.x + dx, self.y + dy)
+
+# Immutable sequences
+def process_data(data: Tuple[int, ...]) -> Tuple[int, ...]:
+    return tuple(x * 2 for x in data)
 ```
 
-## Built-in Functional Tools
-
-### map()
+### Higher-Order Functions
 ```python
-from typing import List, Callable, TypeVar
+from typing import Callable, TypeVar, List, Any
+from functools import partial, reduce
 
 T = TypeVar('T')
 U = TypeVar('U')
 
-def map_list(func: Callable[[T], U], items: List[T]) -> List[U]:
-    return list(map(func, items))
-
-# Examples
-numbers = [1, 2, 3, 4, 5]
-squares = map_list(lambda x: x * x, numbers)  # [1, 4, 9, 16, 25]
-names = ["alice", "bob", "charlie"]
-upper_names = map_list(str.upper, names)  # ["ALICE", "BOB", "CHARLIE"]
-```
-
-### filter()
-```python
-def filter_list(pred: Callable[[T], bool], items: List[T]) -> List[T]:
-    return list(filter(pred, items))
-
-# Examples
-numbers = [1, 2, 3, 4, 5, 6]
-even = filter_list(lambda x: x % 2 == 0, numbers)  # [2, 4, 6]
-words = ["apple", "banana", "cherry", "date"]
-long_words = filter_list(lambda x: len(x) > 5, words)  # ["banana"]
-```
-
-### reduce()
-```python
-from functools import reduce
-from typing import Optional
-
-def reduce_list(
-    func: Callable[[T, T], T],
-    items: List[T],
-    initial: Optional[T] = None
-) -> T:
-    if initial is not None:
-        return reduce(func, items, initial)
-    return reduce(func, items)
-
-# Examples
-numbers = [1, 2, 3, 4, 5]
-sum_all = reduce_list(lambda x, y: x + y, numbers)  # 15
-product = reduce_list(lambda x, y: x * y, numbers)  # 120
-```
-
-## List Comprehensions
-
-### Basic Comprehensions
-```python
-# List comprehension with transformation
-squares = [x * x for x in range(10)]
-
-# List comprehension with filtering
-even_squares = [x * x for x in range(10) if x % 2 == 0]
-
-# Nested list comprehension
-matrix = [[i + j for j in range(3)] for i in range(3)]
-```
-
-### Advanced Comprehensions
-```python
-from typing import Dict, Set, Tuple
-
-# Dictionary comprehension
-square_dict: Dict[int, int] = {x: x * x for x in range(5)}
-
-# Set comprehension
-vowels = "aeiou"
-word = "hello"
-vowel_set: Set[str] = {c for c in word if c in vowels}
-
-# Generator expression
-sum_squares = sum(x * x for x in range(10))
-```
-
-## Immutability
-
-### Immutable Data Structures
-```python
-from typing import NamedTuple, Tuple
-
-class Point(NamedTuple):
-    x: float
-    y: float
-
-    def move(self, dx: float, dy: float) -> 'Point':
-        return Point(self.x + dx, self.y + dy)
-
-def update_tuple(t: Tuple[int, ...], index: int, value: int) -> Tuple[int, ...]:
-    return t[:index] + (value,) + t[index + 1:]
-```
-
-### Working with Immutable State
-```python
-from dataclasses import dataclass
-from typing import List, Optional
-
-@dataclass(frozen=True)
-class User:
-    name: str
-    email: str
-    age: Optional[int] = None
-
-    def with_age(self, new_age: int) -> 'User':
-        return User(self.name, self.email, new_age)
-
-    def with_email(self, new_email: str) -> 'User':
-        return User(self.name, new_email, self.age)
-```
-
-## Function Composition
-
-### Basic Composition
-```python
-from typing import Callable
-
-def compose2(f: Callable[[U], V], g: Callable[[T], U]) -> Callable[[T], V]:
+def compose(f: Callable[[U], T], g: Callable[[Any], U]) -> Callable[[Any], T]:
+    """Function composition"""
     return lambda x: f(g(x))
 
-# Example
+def pipe(value: T, *functions: Callable) -> Any:
+    """Function pipeline"""
+    return reduce(lambda v, f: f(v), functions, value)
+
+# Example usage
 def double(x: int) -> int:
     return x * 2
 
 def increment(x: int) -> int:
     return x + 1
 
-double_then_increment = compose2(increment, double)
-increment_then_double = compose2(double, increment)
+# Compose functions
+double_then_increment = compose(increment, double)
+increment_then_double = compose(double, increment)
 
-print(double_then_increment(3))  # 7
-print(increment_then_double(3))  # 8
+print(double_then_increment(5))      # 11
+print(increment_then_double(5))      # 12
 ```
 
-### Advanced Composition
+## Functional Tools
+
+### Map, Filter, Reduce
 ```python
+from typing import TypeVar, List, Callable
 from functools import reduce
-from typing import Callable, TypeVar
+from operator import add
+
+T = TypeVar('T')
+U = TypeVar('U')
+
+# Map example
+numbers: List[int] = [1, 2, 3, 4, 5]
+squared = list(map(lambda x: x * x, numbers))
+
+# Filter example
+even_numbers = list(filter(lambda x: x % 2 == 0, numbers))
+
+# Reduce example
+sum_numbers = reduce(add, numbers)
+
+# Combining operations
+result = reduce(
+    add,
+    filter(lambda x: x % 2 == 0, 
+           map(lambda x: x * x, numbers))
+)
+```
+
+### Partial Application
+```python
+from typing import Callable
+from functools import partial
+
+def greet(prefix: str, name: str) -> str:
+    return f"{prefix} {name}!"
+
+# Create specialized functions
+greet_mr = partial(greet, "Mr.")
+greet_ms = partial(greet, "Ms.")
+
+print(greet_mr("Smith"))    # Mr. Smith!
+print(greet_ms("Johnson"))  # Ms. Johnson!
+```
+
+### Decorators as Higher-Order Functions
+```python
+from typing import Callable, TypeVar, Any
+from functools import wraps
+import time
 
 T = TypeVar('T')
 
-def compose(*functions: Callable[[T], T]) -> Callable[[T], T]:
+def memoize(func: Callable[..., T]) -> Callable[..., T]:
+    """Memoization decorator"""
+    cache = {}
+    
+    @wraps(func)
+    def wrapper(*args: Any, **kwargs: Any) -> T:
+        key = str(args) + str(kwargs)
+        if key not in cache:
+            cache[key] = func(*args, **kwargs)
+        return cache[key]
+    
+    return wrapper
+
+@memoize
+def fibonacci(n: int) -> int:
+    if n < 2:
+        return n
+    return fibonacci(n - 1) + fibonacci(n - 2)
+```
+
+## Advanced Functional Patterns
+
+### Monads
+```python
+from typing import TypeVar, Generic, Callable, Optional
+from dataclasses import dataclass
+
+T = TypeVar('T')
+U = TypeVar('U')
+
+@dataclass
+class Maybe(Generic[T]):
+    """Maybe monad implementation"""
+    value: Optional[T]
+    
+    @staticmethod
+    def just(value: T) -> 'Maybe[T]':
+        return Maybe(value)
+    
+    @staticmethod
+    def nothing() -> 'Maybe[T]':
+        return Maybe(None)
+    
+    def bind(self, f: Callable[[T], 'Maybe[U]']) -> 'Maybe[U]':
+        if self.value is None:
+            return Maybe.nothing()
+        return f(self.value)
+    
+    def map(self, f: Callable[[T], U]) -> 'Maybe[U]':
+        if self.value is None:
+            return Maybe.nothing()
+        return Maybe.just(f(self.value))
+
+# Example usage
+def safe_divide(x: float, y: float) -> Maybe[float]:
+    if y == 0:
+        return Maybe.nothing()
+    return Maybe.just(x / y)
+
+def safe_sqrt(x: float) -> Maybe[float]:
+    if x < 0:
+        return Maybe.nothing()
+    return Maybe.just(x ** 0.5)
+
+# Chain operations safely
+result = (Maybe.just(16.0)
+         .bind(lambda x: safe_divide(x, 4))
+         .bind(safe_sqrt))
+```
+
+### Function Composition with Generators
+```python
+from typing import Iterator, TypeVar, Callable, Iterable
+
+T = TypeVar('T')
+U = TypeVar('U')
+V = TypeVar('V')
+
+def compose_gen(f: Callable[[T], U], 
+                g: Callable[[U], V]) -> Callable[[Iterator[T]], Iterator[V]]:
+    """Compose functions that work with iterators"""
+    def composed(it: Iterator[T]) -> Iterator[V]:
+        return (f(x) for x in map(g, it))
+    return composed
+
+def chunk(size: int) -> Callable[[Iterator[T]], Iterator[List[T]]]:
+    """Create chunks of size n"""
+    def chunker(it: Iterator[T]) -> Iterator[List[T]]:
+        chunk = []
+        for item in it:
+            chunk.append(item)
+            if len(chunk) == size:
+                yield chunk
+                chunk = []
+        if chunk:
+            yield chunk
+    return chunker
+
+# Example usage
+numbers = range(10)
+process = compose_gen(
+    lambda x: x * 2,
+    lambda x: x + 1
+)
+chunked = chunk(3)(process(numbers))
+```
+
+## Best Practices
+
+1. Prefer Pure Functions
+   - Avoid side effects
+   - Make dependencies explicit
+   - Return new objects instead of modifying
+
+2. Use Type Hints
+   - Make function signatures clear
+   - Enable better tooling support
+   - Document expected types
+
+3. Leverage Standard Library
+   - Use functools module
+   - Utilize itertools for iteration
+   - Apply operator module functions
+
+4. Performance Considerations
+   - Use generators for large datasets
+   - Consider memoization for expensive operations
+   - Profile recursive functions
+
+## Common Patterns
+
+### Function Composition
+```python
+from typing import Callable, TypeVar
+from functools import reduce
+
+T = TypeVar('T')
+
+def compose(*functions: Callable) -> Callable:
+    """Compose multiple functions"""
     return reduce(lambda f, g: lambda x: f(g(x)), functions)
 
-def pipe(*functions: Callable[[T], T]) -> Callable[[T], T]:
-    return reduce(lambda f, g: lambda x: g(f(x)), functions)
+# Usage
+processed = compose(str.strip, str.lower, str.capitalize)
+result = processed("  HELLO WORLD  ")  # "Hello world"
+```
 
-# Example
-def add_one(x: int) -> int:
-    return x + 1
+### Pipeline Pattern
+```python
+from typing import Any, Callable
+from dataclasses import dataclass
+from functools import reduce
 
-def multiply_by_two(x: int) -> int:
-    return x * 2
+@dataclass
+class Pipeline:
+    """Data processing pipeline"""
+    functions: List[Callable]
+    
+    def __call__(self, value: Any) -> Any:
+        return reduce(lambda v, f: f(v), 
+                     self.functions, 
+                     value)
+    
+    def add_step(self, func: Callable) -> 'Pipeline':
+        return Pipeline(self.functions + [func])
 
-def subtract_three(x: int) -> int:
-    return x - 3
-
-# Composition (right to left)
-composed = compose(subtract_three, multiply_by_two, add_one)
-print(composed(5))  # ((5 + 1) * 2) - 3 = 9
-
-# Pipeline (left to right)
-piped = pipe(add_one, multiply_by_two, subtract_three)
-print(piped(5))  # ((5 + 1) * 2) - 3 = 9
+# Usage
+pipeline = Pipeline([
+    lambda x: x * 2,
+    lambda x: x + 1,
+    lambda x: f"Result: {x}"
+])
+result = pipeline(5)  # "Result: 11"
 ```
 
 ## Exercises
 
-1. Implement a functional linked list with immutable operations
-2. Create a pipeline of data transformations using function composition
-3. Write a memoization decorator for pure functions
-4. Implement map, filter, and reduce from scratch
-5. Create an immutable stack or queue data structure
+1. Implement a lazy evaluation decorator
+2. Create a function composition utility
+3. Build a Maybe monad for error handling
+4. Design a data processing pipeline
+5. Practice with higher-order functions

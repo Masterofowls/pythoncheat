@@ -4,50 +4,59 @@
 
 ### Basic Iterator Protocol
 ```python
-class Counter:
-    """Simple iterator that counts up to n"""
-    def __init__(self, n):
-        self.n = n
-        self.current = 0
+class CountUp:
+    """Simple iterator that counts up from a start number"""
+    def __init__(self, start, end):
+        self.current = start
+        self.end = end
     
     def __iter__(self):
         return self
     
     def __next__(self):
-        if self.current >= self.n:
+        if self.current > self.end:
             raise StopIteration
+        current = self.current
         self.current += 1
-        return self.current
+        return current
 
 # Using the iterator
-counter = Counter(3)
+counter = CountUp(1, 3)
 for num in counter:
     print(num)  # Prints 1, 2, 3
 ```
 
-### Custom Iterator Class
+### Custom Sequence Iterator
 ```python
-class FibonacciIterator:
-    """Iterator that generates Fibonacci numbers"""
-    def __init__(self, max_numbers):
-        self.max_numbers = max_numbers
-        self.current = 0
-        self.a, self.b = 0, 1
+class Fibonacci:
+    """Iterator that generates Fibonacci sequence"""
+    def __init__(self, max_count):
+        self.max_count = max_count
+        self.count = 0
+        self.a = 0
+        self.b = 1
     
     def __iter__(self):
         return self
     
     def __next__(self):
-        if self.current >= self.max_numbers:
+        if self.count >= self.max_count:
             raise StopIteration
         
-        result = self.a
-        self.a, self.b = self.b, self.a + self.b
-        self.current += 1
+        if self.count == 0:
+            self.count += 1
+            return self.a
+        elif self.count == 1:
+            self.count += 1
+            return self.b
+        
+        result = self.a + self.b
+        self.a, self.b = self.b, result
+        self.count += 1
         return result
 
-# Using FibonacciIterator
-fib = FibonacciIterator(5)
+# Using Fibonacci iterator
+fib = Fibonacci(5)
 print(list(fib))  # [0, 1, 1, 2, 3]
 ```
 
@@ -55,282 +64,243 @@ print(list(fib))  # [0, 1, 1, 2, 3]
 
 ### Basic Generator Functions
 ```python
-def countdown(n):
-    """Generator that counts down from n to 1"""
-    while n > 0:
-        yield n
-        n -= 1
+def count_up(start, end):
+    """Generator function that counts up from start to end"""
+    current = start
+    while current <= end:
+        yield current
+        current += 1
 
 # Using the generator
-for num in countdown(3):
-    print(num)  # Prints 3, 2, 1
+for num in count_up(1, 3):
+    print(num)  # Prints 1, 2, 3
 
-def fibonacci(max_numbers):
-    """Generator for Fibonacci numbers"""
-    a, b = 0, 1
-    count = 0
-    while count < max_numbers:
-        yield a
-        a, b = b, a + b
-        count += 1
-
-# Using fibonacci generator
-print(list(fibonacci(5)))  # [0, 1, 1, 2, 3]
-```
-
-### Generator Expressions
-```python
 # Generator expression
 squares = (x**2 for x in range(5))
-
-# Comparing with list comprehension
-squares_list = [x**2 for x in range(5)]  # Creates list in memory
-squares_gen = (x**2 for x in range(5))   # Creates generator object
-
-# Memory efficient processing of large sequences
-sum(x**2 for x in range(1000000))
+print(list(squares))  # [0, 1, 4, 9, 16]
 ```
 
-## Advanced Generator Features
-
-### Send and Throw
+### Generator with State
 ```python
-def counter():
-    """Generator that can receive values"""
-    count = 0
+def stateful_generator(start=0):
+    """Generator that maintains state between yields"""
+    count = start
     while True:
+        # receive value from send()
         val = yield count
         if val is not None:
             count = val
         else:
             count += 1
 
-# Using send
-c = counter()
-print(next(c))      # 0
-print(c.send(10))   # 10
-print(next(c))      # 11
-
-def error_handler():
-    """Generator that can handle exceptions"""
-    while True:
-        try:
-            x = yield
-        except ValueError:
-            print("Caught ValueError!")
-        else:
-            print(f"Received: {x}")
-
-# Using throw
-h = error_handler()
-next(h)  # Prime the generator
-h.send(1)          # Received: 1
-h.throw(ValueError)  # Caught ValueError!
+# Using stateful generator
+gen = stateful_generator(1)
+print(next(gen))    # 1
+print(next(gen))    # 2
+print(gen.send(10)) # 10
+print(next(gen))    # 11
 ```
 
-### Subgenerators (yield from)
+### Infinite Generators
 ```python
-def sub_gen():
-    yield 1
-    yield 2
-    yield 3
+def fibonacci_infinite():
+    """Infinite generator for Fibonacci sequence"""
+    a, b = 0, 1
+    while True:
+        yield a
+        a, b = b, a + b
 
-def main_gen():
-    yield 'a'
-    yield from sub_gen()
-    yield 'b'
+# Using infinite generator with limit
+def take(n, iterator):
+    """Take first n items from iterator"""
+    return [next(iterator) for _ in range(n)]
+
+fib = fibonacci_infinite()
+print(take(10, fib))  # [0, 1, 1, 2, 3, 5, 8, 13, 21, 34]
+```
+
+## Advanced Generator Features
+
+### Generator Methods
+```python
+def number_generator():
+    """Generator demonstrating .send(), .throw(), and .close()"""
+    try:
+        start = yield "Ready to start!"
+        print(f"Started with {start}")
+        
+        while True:
+            try:
+                received = yield start
+                if received is not None:
+                    start = received
+                else:
+                    start += 1
+            except ValueError as e:
+                start = yield f"Caught error: {e}"
+    finally:
+        print("Generator is closing")
+
+# Using generator methods
+gen = number_generator()
+print(next(gen))          # Ready to start!
+print(gen.send(10))       # Started with 10, returns 10
+print(next(gen))          # 11
+print(gen.throw(ValueError("Invalid number")))  # Caught error: Invalid number
+gen.close()              # Generator is closing
+```
+
+### Subgenerators with yield from
+```python
+def sub_gen(start, end):
+    """Subgenerator that yields a range of numbers"""
+    for i in range(start, end):
+        yield i
+
+def main_gen(ranges):
+    """Main generator that delegates to subgenerators"""
+    for start, end in ranges:
+        yield from sub_gen(start, end)
+        yield "---"  # Separator between ranges
 
 # Using yield from
-for item in main_gen():
-    print(item)  # Prints: a, 1, 2, 3, b
+ranges = [(1, 4), (5, 7)]
+for item in main_gen(ranges):
+    print(item)  # 1, 2, 3, ---, 5, 6, ---
 ```
 
-## Infinite Generators
+## Generator Patterns
 
-### Infinite Sequences
+### Pipeline with Generators
 ```python
-def infinite_counter(start=0):
-    """Infinite counting generator"""
-    num = start
-    while True:
-        yield num
-        num += 1
+def read_data():
+    """Generate raw data"""
+    data = [1, 2, 3, 4, 5]
+    for item in data:
+        yield item
 
-# Using itertools.islice to limit infinite generator
-from itertools import islice
-first_five = list(islice(infinite_counter(), 5))
-print(first_five)  # [0, 1, 2, 3, 4]
+def filter_even(numbers):
+    """Filter even numbers"""
+    for num in numbers:
+        if num % 2 == 0:
+            yield num
 
-def primes():
-    """Infinite generator for prime numbers"""
-    def is_prime(n):
-        if n < 2:
-            return False
-        for i in range(2, int(n ** 0.5) + 1):
-            if n % i == 0:
-                return False
-        return True
+def multiply_by_two(numbers):
+    """Multiply each number by two"""
+    for num in numbers:
+        yield num * 2
+
+# Creating pipeline
+def pipeline():
+    return multiply_by_two(filter_even(read_data()))
+
+print(list(pipeline()))  # [4, 8]
+```
+
+### Context Manager with Generator
+```python
+from contextlib import contextmanager
+
+@contextmanager
+def managed_file(filename):
+    """File context manager implemented as generator"""
+    try:
+        f = open(filename, 'w')
+        yield f
+    finally:
+        f.close()
+
+# Using the context manager
+with managed_file('test.txt') as f:
+    f.write('Hello, World!')
+```
+
+### Lazy Evaluation
+```python
+def compute_expensive_values():
+    """Generator for expensive computations"""
+    cache = {}
     
-    n = 2
-    while True:
-        if is_prime(n):
-            yield n
-        n += 1
+    for i in range(10):
+        if i in cache:
+            result = cache[i]
+        else:
+            # Simulate expensive computation
+            result = i ** 2
+            cache[i] = result
+        yield result
 
-# Get first 5 primes
-print(list(islice(primes(), 5)))  # [2, 3, 5, 7, 11]
-```
-
-## Generator Pipelines
-
-### Building Data Pipelines
-```python
-def read_lines(file):
-    """Generator that reads lines from file"""
-    with open(file) as f:
-        for line in f:
-            yield line.strip()
-
-def grep(pattern, lines):
-    """Generator that filters lines matching pattern"""
-    for line in lines:
-        if pattern in line:
-            yield line
-
-def uppercase(lines):
-    """Generator that converts lines to uppercase"""
-    for line in lines:
-        yield line.upper()
-
-# Composing generators
-def process_log(file):
-    lines = read_lines(file)
-    errors = grep('ERROR', lines)
-    upper_errors = uppercase(errors)
-    return upper_errors
-
-# Usage
-# for line in process_log('app.log'):
-#     print(line)
-```
-
-## Memory-Efficient Processing
-
-### Processing Large Files
-```python
-def process_large_file(filename):
-    """Memory-efficient file processing"""
-    def read_chunks(file, chunk_size=1024):
-        while True:
-            chunk = file.read(chunk_size)
-            if not chunk:
-                break
-            yield chunk
-    
-    with open(filename, 'rb') as f:
-        for chunk in read_chunks(f):
-            # Process chunk here
-            pass
-
-def csv_reader(file_name):
-    """Memory-efficient CSV reader"""
-    for row in open(file_name):
-        yield row.rstrip().split(',')
+# Values are computed only when needed
+values = compute_expensive_values()
+print(next(values))  # Computes and returns first value
+print(next(values))  # Computes and returns second value
 ```
 
 ## Best Practices
 
-### Generator vs List
+### Memory Efficient Processing
 ```python
-# Memory inefficient
-def get_all_users():
-    users = []
-    for user in database.query():
-        users.append(process_user(user))
-    return users
+def process_large_file(filename):
+    """Process file line by line instead of loading entirely"""
+    with open(filename) as f:
+        for line in f:
+            # Process line
+            yield line.strip().upper()
 
-# Memory efficient
-def get_all_users():
-    for user in database.query():
-        yield process_user(user)
-
-# Using generators for large datasets
-def process_large_dataset():
-    data = get_all_users()  # Returns generator
-    processed = (process(item) for item in data)  # Another generator
-    for result in processed:  # Process one item at a time
-        save_result(result)
+# Using the generator
+for processed_line in process_large_file('large_file.txt'):
+    print(processed_line)
 ```
 
-### Error Handling
+### Generator Expression vs List Comprehension
 ```python
-def safe_generator():
-    """Generator with proper cleanup"""
-    resource = acquire_resource()
-    try:
-        for item in resource:
-            yield item
-    finally:
-        resource.cleanup()
+# List comprehension - creates full list in memory
+squares_list = [x**2 for x in range(1000000)]
 
-def with_retry(generator, max_attempts=3):
-    """Wrapper for generators with retry logic"""
-    attempt = 0
-    while attempt < max_attempts:
-        try:
-            yield from generator
-            break
-        except Exception as e:
-            attempt += 1
-            if attempt == max_attempts:
-                raise e
+# Generator expression - creates values on demand
+squares_gen = (x**2 for x in range(1000000))
+
+# Memory efficient sum using generator
+total = sum(squares_gen)
 ```
 
 ## Common Patterns
 
 ### Batch Processing
 ```python
-def batch_items(items, batch_size=100):
-    """Generator that yields batches of items"""
-    batch = []
-    for item in items:
-        batch.append(item)
-        if len(batch) == batch_size:
-            yield batch
-            batch = []
-    if batch:
-        yield batch
+def batch_generator(data, batch_size):
+    """Generate data in batches"""
+    for i in range(0, len(data), batch_size):
+        yield data[i:i + batch_size]
 
-# Usage
-items = range(350)
-for batch in batch_items(items, 100):
-    process_batch(batch)
+# Process data in batches
+data = list(range(10))
+for batch in batch_generator(data, 3):
+    print(f"Processing batch: {batch}")
 ```
 
-### State Machines
+### Event Stream
 ```python
-def parser_fsm():
-    """Generator-based finite state machine"""
-    state = 'START'
+def event_stream():
+    """Simulate event stream"""
+    import time
+    events = []
     while True:
-        char = yield
-        if state == 'START':
-            if char == '{':
-                state = 'OPEN_BRACE'
-            elif char == '[':
-                state = 'OPEN_BRACKET'
-        elif state == 'OPEN_BRACE':
-            if char == '}':
-                state = 'START'
-        elif state == 'OPEN_BRACKET':
-            if char == ']':
-                state = 'START'
+        # Check for new events
+        while events:
+            yield events.pop(0)
+        time.sleep(0.1)
+
+def handle_events():
+    stream = event_stream()
+    for event in stream:
+        print(f"Handling event: {event}")
 ```
 
 ## Exercises
 
-1. Create a generator that yields all permutations of a sequence
-2. Implement a generator-based pipeline for processing log files
-3. Build a memory-efficient pagination system using generators
-4. Create a generator that implements the merge step of merge sort
-5. Design a generator-based task scheduler
+1. Create a generator that yields prime numbers up to a given limit
+2. Implement a generator-based solution for reading and processing large CSV files
+3. Create a pipeline of generators for text processing
+4. Implement a generator that simulates a task scheduler
+5. Create a memory-efficient data transformation pipeline using generators

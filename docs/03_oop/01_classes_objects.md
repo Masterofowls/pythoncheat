@@ -7,92 +7,98 @@
 class Person:
     """A simple class representing a person."""
     
-    # Class variable (shared by all instances)
+    # Class attribute (shared by all instances)
     species = "Homo sapiens"
     
-    # Constructor (initialization)
+    # Initialize instance
     def __init__(self, name, age):
-        # Instance variables (unique to each instance)
+        # Instance attributes (unique to each instance)
         self.name = name
         self.age = age
     
     # Instance method
     def greet(self):
-        return f"Hello, I'm {self.name}"
-    
-    # String representation
-    def __str__(self):
-        return f"{self.name} ({self.age} years old)"
+        return f"Hello, my name is {self.name}"
 ```
 
 ### Creating Objects
 ```python
-# Creating instances
-person1 = Person("Alice", 25)
-person2 = Person("Bob", 30)
+# Create instances
+person1 = Person("Alice", 30)
+person2 = Person("Bob", 25)
 
-# Accessing attributes and methods
+# Access attributes
 print(person1.name)         # Alice
-print(person1.greet())      # Hello, I'm Alice
-print(person1)              # Alice (25 years old)
-
-# Accessing class variables
-print(Person.species)       # Homo sapiens
+print(person2.age)          # 25
 print(person1.species)      # Homo sapiens
+
+# Call methods
+print(person1.greet())      # Hello, my name is Alice
 ```
 
-## Class and Instance Variables
+## Class Components
 
-### Class Variables
+### Class Attributes
 ```python
-class Employee:
-    # Class variables
-    company = "Tech Corp"
-    employee_count = 0
+class Circle:
+    # Class attributes
+    pi = 3.14159
+    circle_count = 0
     
-    def __init__(self, name):
-        self.name = name
-        Employee.employee_count += 1
+    def __init__(self, radius):
+        self.radius = radius
+        Circle.circle_count += 1
     
     @classmethod
-    def get_company_info(cls):
-        return f"{cls.company} has {cls.employee_count} employees"
+    def from_diameter(cls, diameter):
+        return cls(diameter / 2)
+    
+    def area(self):
+        return Circle.pi * self.radius ** 2
+
+# Using class attributes
+circle = Circle(5)
+print(Circle.circle_count)  # 1
+print(circle.pi)           # 3.14159
 ```
 
-### Instance Variables
+### Instance Attributes
 ```python
 class BankAccount:
-    # Class variable
-    interest_rate = 0.02
-    
-    def __init__(self, account_number, balance):
-        # Instance variables
+    def __init__(self, account_number, balance=0):
+        # Instance attributes
         self.account_number = account_number
         self.balance = balance
-        self._transactions = []  # Protected instance variable
-    
+        self._transactions = []  # Protected attribute
+        
     def deposit(self, amount):
         self.balance += amount
-        self._transactions.append(("deposit", amount))
+        self._transactions.append(f"Deposit: {amount}")
+    
+    def get_balance(self):
+        return self.balance
 ```
 
-## Methods
+### Methods
 
-### Instance Methods
+#### Instance Methods
 ```python
 class Rectangle:
     def __init__(self, width, height):
         self.width = width
         self.height = height
     
+    # Regular instance method
     def area(self):
         return self.width * self.height
     
-    def perimeter(self):
-        return 2 * (self.width + self.height)
+    # Method with parameters
+    def resize(self, width, height):
+        self.width = width
+        self.height = height
 ```
 
-### Class Methods
+#### Class Methods
 ```python
 class Date:
     def __init__(self, year, month, day):
@@ -110,9 +116,13 @@ class Date:
         import datetime
         today = datetime.datetime.now()
         return cls(today.year, today.month, today.day)
+
+# Using class methods
+date = Date.from_string('2025-04-28')
+today = Date.today()
 ```
 
-### Static Methods
+#### Static Methods
 ```python
 class MathOperations:
     @staticmethod
@@ -122,33 +132,32 @@ class MathOperations:
     @staticmethod
     def is_positive(x):
         return x > 0
+
+# Using static methods
+print(MathOperations.add(5, 3))      # 8
+print(MathOperations.is_positive(5))  # True
 ```
 
 ## Special Methods
 
-### Constructor and Destructor
-```python
-class Resource:
-    def __init__(self, name):
-        self.name = name
-        print(f"Resource {name} initialized")
-    
-    def __del__(self):
-        print(f"Resource {self.name} cleaned up")
-```
-
 ### String Representation
 ```python
-class Point:
-    def __init__(self, x, y):
-        self.x = x
-        self.y = y
+class Book:
+    def __init__(self, title, author):
+        self.title = title
+        self.author = author
     
+    # Informal string representation
     def __str__(self):
-        return f"Point({self.x}, {self.y})"
+        return f"{self.title} by {self.author}"
     
+    # Formal string representation
     def __repr__(self):
-        return f"Point(x={self.x}, y={self.y})"
+        return f"Book(title='{self.title}', author='{self.author}')"
+
+book = Book("1984", "George Orwell")
+print(str(book))   # 1984 by George Orwell
+print(repr(book))  # Book(title='1984', author='George Orwell')
 ```
 
 ### Comparison Methods
@@ -165,6 +174,13 @@ class Temperature:
     
     def __le__(self, other):
         return self.celsius <= other.celsius
+    
+    # Python automatically provides __gt__, __ge__ based on __lt__
+
+t1 = Temperature(20)
+t2 = Temperature(25)
+print(t1 < t2)    # True
+print(t1 == t2)   # False
 ```
 
 ### Container Methods
@@ -179,122 +195,124 @@ class Deck:
     def __getitem__(self, position):
         return self.cards[position]
     
-    def __setitem__(self, position, value):
-        self.cards[position] = value
+    def __setitem__(self, position, card):
+        self.cards[position] = card
+    
+    def __delitem__(self, position):
+        del self.cards[position]
     
     def __contains__(self, card):
         return card in self.cards
+
+deck = Deck()
+deck.cards = ["A♠", "K♠", "Q♠"]
+print(len(deck))        # 3
+print(deck[0])         # A♠
+print("K♠" in deck)    # True
 ```
 
-## Properties
+## Properties and Encapsulation
 
-### Basic Properties
+### Properties
 ```python
-class Circle:
-    def __init__(self, radius):
-        self._radius = radius
+class Employee:
+    def __init__(self, first_name, last_name, salary):
+        self._first_name = first_name
+        self._last_name = last_name
+        self._salary = salary
     
     @property
-    def radius(self):
-        return self._radius
-    
-    @radius.setter
-    def radius(self, value):
-        if value <= 0:
-            raise ValueError("Radius must be positive")
-        self._radius = value
+    def full_name(self):
+        return f"{self._first_name} {self._last_name}"
     
     @property
-    def area(self):
-        return 3.14159 * self._radius ** 2
+    def salary(self):
+        return self._salary
+    
+    @salary.setter
+    def salary(self, value):
+        if value < 0:
+            raise ValueError("Salary cannot be negative")
+        self._salary = value
+    
+    @salary.deleter
+    def salary(self):
+        self._salary = 0
+
+emp = Employee("John", "Doe", 50000)
+print(emp.full_name)  # John Doe
+emp.salary = 60000    # Using setter
+del emp.salary        # Using deleter
 ```
 
-### Property Decorators
+### Private Attributes
 ```python
-class Temperature:
-    def __init__(self, celsius=0):
-        self._celsius = celsius
+class BankAccount:
+    def __init__(self, balance):
+        self.__balance = balance    # Private attribute
+        self._log = []             # Protected attribute
     
-    @property
-    def celsius(self):
-        return self._celsius
+    def deposit(self, amount):
+        self.__balance += amount
+        self._log.append(f"Deposit: {amount}")
     
-    @celsius.setter
-    def celsius(self, value):
-        self._celsius = value
-    
-    @property
-    def fahrenheit(self):
-        return (self._celsius * 9/5) + 32
-    
-    @fahrenheit.setter
-    def fahrenheit(self, value):
-        self._celsius = (value - 32) * 5/9
+    def get_balance(self):
+        return self.__balance
+
+account = BankAccount(1000)
+# print(account.__balance)  # AttributeError
+print(account.get_balance())  # 1000
 ```
 
 ## Best Practices
 
-### Encapsulation
+### Clean Class Design
 ```python
-class BankAccount:
-    def __init__(self, balance):
-        self._balance = balance  # Protected
-        self.__account_number = None  # Private
+class User:
+    """
+    A class representing a user in the system.
     
-    def deposit(self, amount):
-        if amount > 0:
-            self._balance += amount
-            self._log_transaction("deposit", amount)
+    Attributes:
+        username (str): The user's username
+        email (str): The user's email address
+        is_active (bool): Whether the user account is active
+    """
     
-    def _log_transaction(self, type_, amount):
-        # Protected method
-        pass
+    def __init__(self, username, email):
+        self.username = username
+        self.email = email
+        self.is_active = True
+    
+    def deactivate(self):
+        """Deactivate the user account."""
+        self.is_active = False
+    
+    def __str__(self):
+        status = "active" if self.is_active else "inactive"
+        return f"User {self.username} ({status})"
 ```
 
-### Data Validation
+### Single Responsibility Principle
 ```python
-class Person:
-    def __init__(self, name, age):
-        self.name = name  # This will call the setter
-        self.age = age    # This will call the setter
-    
-    @property
-    def name(self):
-        return self._name
-    
-    @name.setter
-    def name(self, value):
-        if not isinstance(value, str):
-            raise TypeError("Name must be a string")
-        if not value.strip():
-            raise ValueError("Name cannot be empty")
-        self._name = value.strip()
-    
-    @property
-    def age(self):
-        return self._age
-    
-    @age.setter
-    def age(self, value):
-        if not isinstance(value, int):
-            raise TypeError("Age must be an integer")
-        if value < 0:
-            raise ValueError("Age cannot be negative")
-        self._age = value
+# Bad: Class does too many things
+class UserManager:
+    def create_user(self): pass
+    def send_email(self): pass
+    def generate_report(self): pass
+
+# Good: Split into focused classes
+class UserManager:
+    def create_user(self): pass
+    def delete_user(self): pass
+
+class EmailService:
+    def send_email(self): pass
+
+class ReportGenerator:
+    def generate_report(self): pass
 ```
 
 ## Common Patterns
-
-### Singleton Pattern
-```python
-class Singleton:
-    _instance = None
-    
-    def __new__(cls):
-        if cls._instance is None:
-            cls._instance = super().__new__(cls)
-        return cls._instance
-```
 
 ### Factory Pattern
 ```python
@@ -317,28 +335,67 @@ class AnimalFactory:
             return Dog()
         elif animal_type == "cat":
             return Cat()
-        raise ValueError("Unknown animal type")
+        raise ValueError(f"Invalid animal type: {animal_type}")
 ```
 
-### Context Manager
+### Singleton Pattern
 ```python
-class File:
-    def __init__(self, filename, mode):
-        self.filename = filename
-        self.mode = mode
+class Singleton:
+    _instance = None
     
-    def __enter__(self):
-        self.file = open(self.filename, self.mode)
-        return self.file
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
     
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self.file.close()
+    def __init__(self):
+        # Initialize only once
+        if not hasattr(self, 'initialized'):
+            self.initialized = True
+            self.data = []
+```
+
+## Practice Examples
+
+```python
+# 1. Shape hierarchy
+class Shape:
+    def area(self):
+        raise NotImplementedError
+    
+    def perimeter(self):
+        raise NotImplementedError
+
+class Rectangle(Shape):
+    def __init__(self, width, height):
+        self.width = width
+        self.height = height
+    
+    def area(self):
+        return self.width * self.height
+    
+    def perimeter(self):
+        return 2 * (self.width + self.height)
+
+# 2. Simple data validator
+class DataValidator:
+    @staticmethod
+    def validate_email(email):
+        import re
+        pattern = r'^[\w\.-]+@[\w\.-]+\.\w+$'
+        return bool(re.match(pattern, email))
+    
+    @staticmethod
+    def validate_phone(phone):
+        import re
+        pattern = r'^\d{10}$'
+        return bool(re.match(pattern, phone))
 ```
 
 ## Exercises
 
-1. Create a class hierarchy for different shapes (Circle, Rectangle, Triangle)
-2. Implement a custom container class that behaves like a list
-3. Create a class that implements the context manager protocol
-4. Build a simple class-based cache system with size limit
-5. Design a class for handling temperature conversions between units
+1. Create a Bank Account class with deposit, withdraw, and transfer methods
+2. Implement a simple Employee hierarchy with different types of employees
+3. Create a Temperature class that can convert between Celsius and Fahrenheit
+4. Design a Library catalog system using classes
+5. Implement a logging system using the Singleton pattern

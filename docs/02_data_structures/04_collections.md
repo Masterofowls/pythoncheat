@@ -2,96 +2,82 @@
 
 ## Counter
 
-### Basic Counter Usage
+### Basic Usage
 ```python
 from collections import Counter
 
-# Creating Counters
-word_counts = Counter(['apple', 'banana', 'apple', 'cherry'])
-char_counts = Counter('mississippi')
-dict_counter = Counter({'a': 4, 'b': 2})
+# Creating counters
+colors = ["red", "blue", "red", "green", "blue", "blue"]
+color_count = Counter(colors)  # Counter({'blue': 3, 'red': 2, 'green': 1})
 
-# Counting methods
-text = "hello world"
-counts = Counter(text)
-print(counts)  # Counter({'l': 3, 'o': 2, 'h': 1, 'e': 1, ' ': 1, 'w': 1, 'r': 1, 'd': 1})
+# From string
+word_count = Counter("mississippi")  # Counter({'i': 4, 's': 4, 'p': 2, 'm': 1})
+
+# From dictionary
+counter = Counter({"a": 2, "b": 3})
 ```
 
 ### Counter Operations
 ```python
-c1 = Counter(['a', 'b', 'b', 'c'])
-c2 = Counter(['b', 'b', 'c', 'd'])
-
-# Addition
-combined = c1 + c2  # Counter({'b': 4, 'c': 2, 'a': 1, 'd': 1})
-
-# Subtraction
-diff = c1 - c2     # Counter({'a': 1})
-
-# Intersection
-common = c1 & c2   # Counter({'b': 2, 'c': 1})
-
-# Union
-all_counts = c1 | c2  # Counter({'b': 2, 'c': 1, 'a': 1, 'd': 1})
+counter = Counter(["a", "b", "b", "c", "c", "c"])
 
 # Most common elements
-top_3 = counts.most_common(3)
+print(counter.most_common(2))  # [('c', 3), ('b', 2)]
+
+# Updating counter
+counter.update(["a", "b", "d"])
+
+# Arithmetic operations
+c1 = Counter(a=3, b=1)
+c2 = Counter(a=1, b=2)
+print(c1 + c2)  # Counter({'a': 4, 'b': 3})
+print(c1 - c2)  # Counter({'a': 2})
 ```
 
 ## defaultdict
 
-### Basic defaultdict Usage
+### Basic Usage
 ```python
 from collections import defaultdict
 
-# Integer default
-int_dict = defaultdict(int)
-int_dict['a'] += 1  # No KeyError
+# Create with default factory
+int_dict = defaultdict(int)      # Default value: 0
+list_dict = defaultdict(list)    # Default value: []
+set_dict = defaultdict(set)      # Default value: set()
 
-# List default
-list_dict = defaultdict(list)
-list_dict['colors'].append('red')  # No KeyError
-
-# Set default
-set_dict = defaultdict(set)
-set_dict['numbers'].add(42)  # No KeyError
+# Custom default factory
+def custom_default():
+    return "Not Found"
+d = defaultdict(custom_default)
 ```
 
-### Common Applications
+### Common Use Cases
 ```python
-# Grouping
-def group_by_length(words):
-    groups = defaultdict(list)
-    for word in words:
-        groups[len(word)].append(word)
-    return dict(groups)
+# Group items by key
+grades = [("Alice", "A"), ("Bob", "B"), ("Alice", "A+")]
+student_grades = defaultdict(list)
+for student, grade in grades:
+    student_grades[student].append(grade)
 
-# Counting
-def count_items(items):
-    counts = defaultdict(int)
-    for item in items:
-        counts[item] += 1
-    return dict(counts)
+# Count occurrences
+words = ["apple", "banana", "apple", "cherry"]
+word_count = defaultdict(int)
+for word in words:
+    word_count[word] += 1
 
-# Building graphs
-def build_graph(edges):
-    graph = defaultdict(set)
-    for start, end in edges:
-        graph[start].add(end)
-        graph[end].add(start)
-    return graph
+# Create nested defaultdict
+nested = defaultdict(lambda: defaultdict(list))
+nested["outer"]["inner"].append("value")
 ```
 
 ## deque (Double-Ended Queue)
 
-### Basic deque Usage
+### Basic Usage
 ```python
 from collections import deque
 
-# Creating deques
-d = deque()
+# Create deque
 d = deque([1, 2, 3])
-d = deque('hello')
 d = deque(maxlen=3)  # Fixed-length deque
 
 # Basic operations
@@ -100,209 +86,238 @@ d.appendleft(0)    # Add to left
 d.pop()            # Remove from right
 d.popleft()        # Remove from left
 d.extend([4, 5])   # Extend on right
-d.extendleft([0, -1])  # Extend on left
+d.extendleft([0])  # Extend on left
 ```
 
-### Advanced deque Operations
+### Advanced Operations
 ```python
 d = deque([1, 2, 3, 4, 5])
 
 # Rotation
 d.rotate(2)    # [4, 5, 1, 2, 3]
-d.rotate(-2)   # [1, 2, 3, 4, 5]
+d.rotate(-1)   # [5, 1, 2, 3, 4]
 
-# Clearing
+# Clear and copy
 d.clear()
+d_copy = d.copy()
 
-# Counting
+# Count and remove
 d = deque([1, 2, 2, 3, 2])
-count = d.count(2)  # 3
-
-# Reversing
-d.reverse()
+count = d.count(2)    # 3
+d.remove(2)          # Removes first occurrence
 ```
 
 ## namedtuple
 
-### Basic namedtuple Usage
+### Creating Named Tuples
 ```python
 from collections import namedtuple
 
-# Creating named tuples
+# Basic creation
 Point = namedtuple('Point', ['x', 'y'])
-Person = namedtuple('Person', 'name age city')
-
-# Creating instances
 p = Point(11, y=22)
-person = Person('John', 30, 'New York')
 
-# Accessing fields
-print(p.x, p.y)
-print(person.name, person.age, person.city)
+# Alternative field specifications
+Person = namedtuple('Person', 'name age city')
+Student = namedtuple('Student', 'name, age, grade')
+Config = namedtuple('Config', 'host port user pass', defaults=['localhost', 8080])
 ```
 
-### Advanced namedtuple Features
+### Operations and Methods
 ```python
-# Default values
-Employee = namedtuple('Employee', ['name', 'salary'], defaults=['Unknown', 0])
-e = Employee()  # Employee(name='Unknown', salary=0)
-
-# Converting to dictionary
-person_dict = person._asdict()
-
-# Creating new instance with updates
-updated_person = person._replace(age=31)
-
-# Field names
-print(Person._fields)  # ('name', 'age', 'city')
-```
-
-## ChainMap
-
-### Basic ChainMap Usage
-```python
-from collections import ChainMap
-
-# Creating ChainMaps
-defaults = {'theme': 'dark', 'language': 'en'}
-user_settings = {'language': 'fr'}
-combined = ChainMap(user_settings, defaults)
+Point = namedtuple('Point', ['x', 'y'])
+p = Point(11, 22)
 
 # Accessing values
-print(combined['theme'])     # 'dark' from defaults
-print(combined['language'])  # 'fr' from user_settings
-```
+print(p.x)          # By name
+print(p[0])         # By index
+x, y = p            # Unpacking
 
-### ChainMap Operations
-```python
-# Adding new mappings
-local = {'debug': True}
-settings = ChainMap(local, user_settings, defaults)
+# Converting to dictionary
+d = p._asdict()     # OrderedDict([('x', 11), ('y', 22)])
 
-# Updating values
-settings['theme'] = 'light'  # Only updates first mapping
+# Creating new instance with changes
+p2 = p._replace(x=33)
 
-# Creating new child
-child = settings.new_child()
-child['theme'] = 'custom'
+# Get field names
+print(p._fields)    # ('x', 'y')
 ```
 
 ## OrderedDict
 
-### Basic OrderedDict Usage
+### Basic Usage (Pre-Python 3.7)
 ```python
 from collections import OrderedDict
 
-# Creating ordered dictionaries
-od = OrderedDict()
-od['first'] = 1
-od['second'] = 2
-od['third'] = 3
+# Create ordered dictionary
+d = OrderedDict()
+d['first'] = 1
+d['second'] = 2
+d['third'] = 3
 
-# Comparing with regular dict (Python 3.7+)
-regular_dict = {'a': 1, 'b': 2}  # Also ordered by insertion
-ordered_dict = OrderedDict([('a', 1), ('b', 2)])
+# Create from list of pairs
+d = OrderedDict([('a', 1), ('b', 2), ('c', 3)])
 ```
 
-### OrderedDict Operations
+### Operations
 ```python
-# Moving items
-od.move_to_end('first')     # Move to last
-od.move_to_end('first', last=False)  # Move to first
+d = OrderedDict()
+d['a'] = 1
+d['b'] = 2
 
-# Popping items
-last = od.popitem()         # Remove last item
-first = od.popitem(last=False)  # Remove first item
+# Move to end
+d.move_to_end('a')          # Move to last
+d.move_to_end('b', False)   # Move to first
+
+# Pop items
+last = d.popitem()          # Remove last item
+first = d.popitem(False)    # Remove first item
+```
+
+## ChainMap
+
+### Basic Usage
+```python
+from collections import ChainMap
+
+# Create ChainMap
+defaults = {'color': 'red', 'user': 'guest'}
+user_settings = {'color': 'blue'}
+cm = ChainMap(user_settings, defaults)
+
+# Accessing values
+print(cm['color'])    # 'blue' (from user_settings)
+print(cm['user'])     # 'guest' (from defaults)
+```
+
+### Operations
+```python
+# Adding new maps
+new_settings = {'color': 'green', 'theme': 'dark'}
+cm2 = cm.new_child(new_settings)
+
+# Accessing parents
+parent = cm.parents   # Get ChainMap without first map
+
+# Update and delete
+cm2['color'] = 'yellow'   # Only updates in first map
+del cm2['color']         # Only deletes from first map
+```
+
+## UserDict, UserList, and UserString
+
+### UserDict Example
+```python
+from collections import UserDict
+
+class CustomDict(UserDict):
+    def __setitem__(self, key, value):
+        super().__setitem__(key.lower(), value)
+    
+    def __getitem__(self, key):
+        return super().__getitem__(key.lower())
+
+d = CustomDict({"Name": "John", "AGE": 30})
+print(d["name"])  # "John"
+```
+
+### UserList Example
+```python
+from collections import UserList
+
+class CustomList(UserList):
+    def append(self, item):
+        if isinstance(item, (int, float)):
+            super().append(item)
+    
+    def extend(self, items):
+        for item in items:
+            self.append(item)
+
+numbers = CustomList([1, 2, 3])
+numbers.append("4")  # Won't be added
+numbers.append(4)    # Will be added
 ```
 
 ## Best Practices
 
 ### Choosing the Right Collection
 ```python
-# Use Counter for counting
-def word_frequency(text):
-    return Counter(text.split())
+# Counter for counting
+words = ["apple", "banana", "apple"]
+counts = Counter(words)
 
-# Use defaultdict for grouping
-def group_by_category(items):
-    groups = defaultdict(list)
-    for item, category in items:
-        groups[category].append(item)
-    return dict(groups)
+# defaultdict for grouping
+groups = defaultdict(list)
 
-# Use deque for FIFO/LIFO queues
-def process_queue(items, maxlen=None):
-    queue = deque(items, maxlen=maxlen)
-    while queue:
-        item = queue.popleft()
-        process(item)
+# deque for queue operations
+queue = deque(maxlen=10)
+
+# namedtuple for structured data
+Point = namedtuple('Point', ['x', 'y'])
+
+# ChainMap for layered lookups
+configs = ChainMap(user_config, default_config)
 ```
 
 ### Performance Considerations
 ```python
-# deque vs list
-from timeit import timeit
+# Use deque for queue operations (O(1))
+queue = deque()
+queue.append(1)      # Fast
+queue.popleft()      # Fast
 
-# deque is faster for append/pop from both ends
-deque_time = timeit('d.appendleft(0)', 'from collections import deque; d=deque()')
-list_time = timeit('l.insert(0, 0)', 'l=[]')
-
-# Counter vs manual counting
-def count_manual(items):
-    counts = {}
-    for item in items:
-        counts[item] = counts.get(item, 0) + 1
-    return counts
-
-def count_with_counter(items):
-    return Counter(items)
+# Don't use list for queue operations
+lst = []
+lst.append(1)        # Fast
+lst.pop(0)          # Slow (O(n))
 ```
 
 ## Common Patterns
 
-### Event History
+### Counting with Counter
 ```python
-class EventHistory:
-    def __init__(self, maxlen=1000):
-        self.events = deque(maxlen=maxlen)
-    
-    def add_event(self, event):
-        self.events.append(event)
-    
-    def get_recent(self, n):
-        return list(itertools.islice(self.events, len(self.events) - n, None))
-```
-
-### Multi-level Settings
-```python
-class Settings:
-    def __init__(self):
-        self.maps = ChainMap()
-    
-    def push_layer(self, mapping):
-        self.maps = self.maps.new_child(mapping)
-    
-    def pop_layer(self):
-        return self.maps.parents
-```
-
-### Frequency Analysis
-```python
-def analyze_text(text):
+# Most common words
+def most_common_words(text, n=10):
     words = text.lower().split()
-    word_freq = Counter(words)
-    
-    return {
-        'most_common': word_freq.most_common(5),
-        'unique_words': len(word_freq),
-        'total_words': sum(word_freq.values())
-    }
+    return Counter(words).most_common(n)
+
+# Finding duplicates
+def find_duplicates(items):
+    counts = Counter(items)
+    return {item: count for item, count in counts.items() if count > 1}
+```
+
+### Multi-level Defaultdict
+```python
+# Creating nested structure
+def tree():
+    return defaultdict(tree)
+
+filesystem = tree()
+filesystem["home"]["user"]["documents"] = "content"
+```
+
+### Priority Queue with deque
+```python
+class PriorityQueue:
+    def __init__(self):
+        self.queues = defaultdict(deque)
+        
+    def add(self, item, priority=0):
+        self.queues[priority].append(item)
+        
+    def get(self):
+        if not self.queues:
+            raise IndexError("queue is empty")
+        highest_priority = max(self.queues.keys())
+        return self.queues[highest_priority].popleft()
 ```
 
 ## Exercises
 
-1. Implement a cache with a maximum size using OrderedDict
-2. Create a breadth-first search using deque
-3. Build a frequency-based text analyzer using Counter
-4. Implement a multi-level configuration system using ChainMap
-5. Create a circular buffer using deque with maxlen
+1. Create a frequency analyzer using Counter
+2. Implement a cache with OrderedDict
+3. Build a directory tree structure using defaultdict
+4. Create a command history feature using deque
+5. Implement a configuration system using ChainMap

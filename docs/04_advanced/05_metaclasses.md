@@ -2,79 +2,116 @@
 
 ## Basic Metaclasses
 
-### Metaclass Syntax
+### Creating Metaclasses
 ```python
 class MyMetaclass(type):
+    """Simple metaclass example"""
     def __new__(cls, name, bases, attrs):
-        # Customize class creation
+        # Add a new method to the class
+        attrs['custom_method'] = lambda self: f"Custom method in {name}"
         return super().__new__(cls, name, bases, attrs)
 
 class MyClass(metaclass=MyMetaclass):
-    pass
+    def normal_method(self):
+        return "Normal method"
+
+# Using the class
+obj = MyClass()
+print(obj.normal_method())    # Normal method
+print(obj.custom_method())    # Custom method in MyClass
 ```
 
-### Custom Class Creation
+### Class Creation Control
 ```python
-class LoggedMetaclass(type):
-    def __new__(cls, name, bases, attrs):
-        print(f"Creating class: {name}")
-        print(f"Bases: {bases}")
-        print(f"Attributes: {attrs}")
-        return super().__new__(cls, name, bases, attrs)
-
-class Example(metaclass=LoggedMetaclass):
-    x = 1
-    
-    def method(self):
-        pass
-```
-
-## Attribute Control
-
-### Attribute Validation
-```python
-class ValidateAttributes(type):
+class ValidateMeta(type):
+    """Metaclass that validates class attributes"""
     def __new__(cls, name, bases, attrs):
         # Check for required attributes
-        required = {"name", "age"}
-        for attr in required:
-            if attr not in attrs:
-                raise TypeError(f"Missing required attribute: {attr}")
+        required = {'name', 'age'}
+        missing = required - set(attrs)
+        if missing:
+            raise TypeError(f"Missing required attributes: {missing}")
+        
+        # Validate attribute types
+        if not isinstance(attrs.get('name'), str):
+            raise TypeError("name must be a string")
+        if not isinstance(attrs.get('age'), int):
+            raise TypeError("age must be an integer")
         
         return super().__new__(cls, name, bases, attrs)
 
-class Person(metaclass=ValidateAttributes):
+class Person(metaclass=ValidateMeta):
     name = "John"
     age = 30
+
+# This would raise TypeError:
+# class InvalidPerson(metaclass=ValidateMeta):
+#     name = 123  # Wrong type
+#     age = "30"  # Wrong type
 ```
+
+## Advanced Metaclass Features
 
 ### Attribute Transformation
 ```python
-class UpperAttributeMetaclass(type):
+class UpperAttributesMeta(type):
+    """Metaclass that converts all string attributes to uppercase"""
     def __new__(cls, name, bases, attrs):
         uppercase_attrs = {
-            key.upper(): value
+            key: value.upper() if isinstance(value, str) else value
             for key, value in attrs.items()
-            if not key.startswith("__")
         }
-        
-        # Update with uppercase keys
-        attrs.update(uppercase_attrs)
-        return super().__new__(cls, name, bases, attrs)
+        return super().__new__(cls, name, bases, uppercase_attrs)
 
-class Config(metaclass=UpperAttributeMetaclass):
+class Config(metaclass=UpperAttributesMeta):
     host = "localhost"
     port = 8080
-    
-# Access with uppercase
-print(Config.HOST)  # "localhost"
+    username = "admin"
+
+print(Config.host)      # LOCALHOST
+print(Config.username)  # ADMIN
+print(Config.port)      # 8080 (unchanged)
 ```
 
-## Registry Pattern
+### Method Wrapping
+```python
+from functools import wraps
+import time
 
-### Class Registry
+class TimingMeta(type):
+    """Metaclass that adds timing to all methods"""
+    def __new__(cls, name, bases, attrs):
+        # Wrap all methods with timing functionality
+        for attr_name, attr_value in attrs.items():
+            if callable(attr_value):
+                attrs[attr_name] = cls.time_method(attr_value)
+        return super().__new__(cls, name, bases, attrs)
+    
+    @staticmethod
+    def time_method(method):
+        @wraps(method)
+        def wrapper(*args, **kwargs):
+            start = time.time()
+            result = method(*args, **kwargs)
+            end = time.time()
+            print(f"{method.__name__} took {end - start:.2f} seconds")
+            return result
+        return wrapper
+
+class Operations(metaclass=TimingMeta):
+    def slow_operation(self):
+        time.sleep(1)
+        return "Done"
+
+# All methods are automatically timed
+ops = Operations()
+ops.slow_operation()  # prints timing information
+```
+
+### Registry Pattern
 ```python
 class RegisteredMeta(type):
+    """Metaclass that maintains a registry of all subclasses"""
     _registry = {}
     
     def __new__(cls, name, bases, attrs):
@@ -86,97 +123,63 @@ class RegisteredMeta(type):
     def get_registry(cls):
         return dict(cls._registry)
 
-class Registered(metaclass=RegisteredMeta):
+class Plugin(metaclass=RegisteredMeta):
+    """Base class for plugins"""
     pass
 
-class MyClass(Registered):
+class AudioPlugin(Plugin):
+    """Audio processing plugin"""
     pass
 
-class AnotherClass(Registered):
+class VideoPlugin(Plugin):
+    """Video processing plugin"""
     pass
 
 # Access registry
-print(RegisteredMeta.get_registry())
+plugins = RegisteredMeta.get_registry()
+print(plugins)  # {'Plugin': <class 'Plugin'>, 'AudioPlugin': <class 'AudioPlugin'>, ...}
 ```
 
-### Plugin System
-```python
-class PluginMeta(type):
-    plugins = {}
-    
-    def __new__(cls, name, bases, attrs):
-        new_cls = super().__new__(cls, name, bases, attrs)
-        if "plugin_name" in attrs:
-            cls.plugins[attrs["plugin_name"]] = new_cls
-        return new_cls
+## Advanced Applications
 
-class Plugin(metaclass=PluginMeta):
-    @classmethod
-    def get_plugin(cls, name):
-        return cls.plugins.get(name)
-
-class TextPlugin(Plugin):
-    plugin_name = "text"
-    
-    def process(self, data):
-        return data.upper()
-
-class JSONPlugin(Plugin):
-    plugin_name = "json"
-    
-    def process(self, data):
-        import json
-        return json.loads(data)
-```
-
-## Abstract Base Classes
-
-### Custom ABC Implementation
-```python
-class ABCMeta(type):
-    def __new__(cls, name, bases, attrs):
-        for key, value in attrs.items():
-            if getattr(value, "__isabstractmethod__", False):
-                attrs[key] = property(value)
-        return super().__new__(cls, name, bases, attrs)
-
-class AbstractClass(metaclass=ABCMeta):
-    @property
-    def my_abstract_method(self):
-        raise NotImplementedError
-
-class ConcreteClass(AbstractClass):
-    @property
-    def my_abstract_method(self):
-        return "Implemented"
-```
-
-### Interface Definition
+### Abstract Base Class Creation
 ```python
 class InterfaceMeta(type):
+    """Metaclass for creating interfaces"""
     def __new__(cls, name, bases, attrs):
-        # Verify interface implementation
+        # Check for abstract method implementations
         for key, value in attrs.items():
             if getattr(value, "__isabstractmethod__", False):
-                raise TypeError(
-                    f"Cannot create abstract class {name} with abstract "
-                    f"method {key}"
-                )
+                continue
+            if key.startswith('_'):
+                continue
+            if not callable(value):
+                continue
+            # Mark public methods as abstract
+            attrs[key].__isabstractmethod__ = True
         return super().__new__(cls, name, bases, attrs)
 
 class Interface(metaclass=InterfaceMeta):
+    """Base class for interfaces"""
     pass
 
-class MyInterface(Interface):
-    def method(self):
+class DataProvider(Interface):
+    def get_data(self):
+        """Must be implemented by subclasses"""
         pass
+    
+    def save_data(self, data):
+        """Must be implemented by subclasses"""
+        pass
+
+# This would raise TypeError (can't instantiate abstract class):
+# provider = DataProvider()
 ```
 
-## Singleton Pattern
-
-### Singleton Metaclass
+### Singleton Implementation
 ```python
 class Singleton(type):
+    """Metaclass for creating singleton classes"""
     _instances = {}
     
     def __call__(cls, *args, **kwargs):
@@ -186,108 +189,133 @@ class Singleton(type):
 
 class Database(metaclass=Singleton):
     def __init__(self):
-        self.connected = False
-    
-    def connect(self):
-        self.connected = True
+        print("Initializing database connection")
 
-# Usage
-db1 = Database()
-db2 = Database()
+# Only creates one instance
+db1 = Database()  # Prints initialization message
+db2 = Database()  # No message
 print(db1 is db2)  # True
 ```
 
-## Advanced Features
-
-### Method Wrapping
+### Attribute Validation
 ```python
-class LoggedMeta(type):
+class ValidateAttributes(type):
+    """Metaclass for attribute type validation"""
+    @staticmethod
+    def validate_type(name, value, expected_type):
+        if not isinstance(value, expected_type):
+            raise TypeError(f"{name} must be {expected_type}")
+        return value
+    
     def __new__(cls, name, bases, attrs):
-        # Wrap all methods with logging
+        annotations = attrs.get('__annotations__', {})
+        for key, value in attrs.items():
+            if key in annotations:
+                attrs[key] = cls.validate_type(
+                    key, value, annotations[key]
+                )
+        return super().__new__(cls, name, bases, attrs)
+
+class User(metaclass=ValidateAttributes):
+    name: str = "John"
+    age: int = 30
+    active: bool = True
+
+# This would raise TypeError:
+# class InvalidUser(metaclass=ValidateAttributes):
+#     name: str = 123  # Wrong type
+```
+
+## Best Practices
+
+### Metaclass Inheritance
+```python
+class BaseMeta(type):
+    """Base metaclass with common functionality"""
+    def __new__(cls, name, bases, attrs):
+        # Add creation timestamp
+        attrs['created_at'] = time.time()
+        return super().__new__(cls, name, bases, attrs)
+
+class LoggedMeta(BaseMeta):
+    """Metaclass that adds logging"""
+    def __new__(cls, name, bases, attrs):
+        # Add logging to methods
         for key, value in attrs.items():
             if callable(value):
                 attrs[key] = cls.log_call(value)
         return super().__new__(cls, name, bases, attrs)
     
     @staticmethod
-    def log_call(func):
+    def log_call(method):
+        @wraps(method)
         def wrapper(*args, **kwargs):
-            print(f"Calling: {func.__name__}")
-            result = func(*args, **kwargs)
-            print(f"Finished: {func.__name__}")
-            return result
+            print(f"Calling {method.__name__}")
+            return method(*args, **kwargs)
         return wrapper
 
 class MyClass(metaclass=LoggedMeta):
-    def my_method(self):
-        print("Method executing")
+    def some_method(self):
+        return "Method called"
 ```
-
-### Dynamic Attribute Creation
-```python
-class ModelMeta(type):
-    def __new__(cls, name, bases, attrs):
-        # Add getters and setters for attributes
-        for key, value in list(attrs.items()):
-            if not key.startswith("_"):
-                attrs[f"get_{key}"] = lambda self, k=key: getattr(self, k)
-                attrs[f"set_{key}"] = lambda self, v, k=key: setattr(self, k, v)
-        return super().__new__(cls, name, bases, attrs)
-
-class Model(metaclass=ModelMeta):
-    def __init__(self, **kwargs):
-        for key, value in kwargs.items():
-            setattr(self, key, value)
-
-class User(Model):
-    name = None
-    age = None
-```
-
-## Best Practices
 
 ### Error Handling
 ```python
 class SafeMeta(type):
+    """Metaclass with error handling"""
     def __new__(cls, name, bases, attrs):
         try:
+            # Wrap all methods with error handling
+            for key, value in attrs.items():
+                if callable(value):
+                    attrs[key] = cls.handle_errors(value)
             return super().__new__(cls, name, bases, attrs)
         except Exception as e:
             print(f"Error creating class {name}: {e}")
-            return None
-
-class MyClass(metaclass=SafeMeta):
-    # This will handle errors during class creation
-    pass
+            raise
+    
+    @staticmethod
+    def handle_errors(method):
+        @wraps(method)
+        def wrapper(*args, **kwargs):
+            try:
+                return method(*args, **kwargs)
+            except Exception as e:
+                print(f"Error in {method.__name__}: {e}")
+                return None
+        return wrapper
 ```
 
-### Metaclass Composition
+## Common Patterns
+
+### Factory Pattern
 ```python
-class MetaA(type):
-    def __new__(cls, name, bases, attrs):
-        attrs["a"] = 1
-        return super().__new__(cls, name, bases, attrs)
+class FactoryMeta(type):
+    """Metaclass for implementing factory pattern"""
+    def __call__(cls, product_type, *args, **kwargs):
+        if not hasattr(cls, f'create_{product_type}'):
+            raise ValueError(f"Unknown product type: {product_type}")
+        creator = getattr(cls, f'create_{product_type}')
+        return creator(*args, **kwargs)
 
-class MetaB(type):
-    def __new__(cls, name, bases, attrs):
-        attrs["b"] = 2
-        return super().__new__(cls, name, bases, attrs)
+class ProductFactory(metaclass=FactoryMeta):
+    @staticmethod
+    def create_book(title, author):
+        return {'type': 'book', 'title': title, 'author': author}
+    
+    @staticmethod
+    def create_movie(title, director):
+        return {'type': 'movie', 'title': title, 'director': director}
 
-class MetaC(MetaA, MetaB):
-    pass
-
-class MyClass(metaclass=MetaC):
-    pass
-
-# Access
-print(MyClass.a)  # 1
-print(MyClass.b)  # 2
+# Using the factory
+book = ProductFactory('book', 'Python 101', 'John Doe')
+movie = ProductFactory('movie', 'Python: The Movie', 'Jane Smith')
 ```
 
 ## Exercises
 
-1. Create a metaclass that automatically adds property decorators
-2. Implement a metaclass for class-level dependency injection
-3. Build a metaclass that enforces method naming conventions
-4. Create a metaclass for automatic serialization/deserialization
-5. Implement a metaclass that adds observer pattern functionality
+1. Create a metaclass that automatically adds property getters and setters
+2. Implement a metaclass for automatic serialization/deserialization
+3. Create a metaclass that enforces method naming conventions
+4. Implement a metaclass for managing database table schemas
+5. Create a metaclass that adds debugging capabilities to all methods
